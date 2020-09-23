@@ -9,6 +9,7 @@ using athernet.Modulators;
 using athernet.Preambles.PreambleBuilders;
 using athernet.Preambles;
 using athernet.Recorders;
+using NAudio.Wave.SampleProviders;
 
 namespace athernet
 {
@@ -17,10 +18,7 @@ namespace athernet
         static int SampleRate = 48000;
         static int PacketLength = 100;
         static int SamplesPerBit = 44;
-        static PSKModulator Modulator = new PSKModulator(SampleRate)
-        {
-            SamplesPerBit = SamplesPerBit
-        };
+        static BinaryModulator Modulator = new BinaryPSKModulator(SampleRate, 8000, 1);
         static FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc)
         {
             SampleRate = SampleRate,
@@ -36,10 +34,21 @@ namespace athernet
 
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i += 2)
+            for (int i = 0, j = 0; i < 100; i += j, j++)
             {
                 bitArray.Set(i, true);
             }
+
+            var signal = new SignalGenerator(SampleRate, 1)
+            {
+                Type = SignalGeneratorType.Sin,
+                Frequency = 8000,
+                Gain = 1
+            };
+
+            var rawSamples = new float[SampleRate * SamplesPerBit];
+            signal.Read(rawSamples, 0, rawSamples.Length);
+            writeTempCsv(rawSamples, "carrier.csv");
 
             Play(bitArray);
             Record();
@@ -51,6 +60,10 @@ namespace athernet
             var preamble = PreambleBuilder.Build();
             var provider = new PacketSampleProvider(preamble, packet);
 
+
+            writeTempCsv(preamble.Data, "preamble_template.csv");
+            writeTempCsv(packet.Samples, "template.csv");
+
             using var wo = new WaveOutEvent();
             wo.Init(provider);
             wo.Play();
@@ -58,6 +71,12 @@ namespace athernet
             {
                 Thread.Sleep(500);
             }
+        }
+
+        static void writeTempCsv(float[] buffer, string fileName)
+        {
+            var path = Path.Combine(Path.GetTempPath(), fileName);
+            File.WriteAllText(path, String.Join(", ", buffer));
         }
 
         static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
@@ -95,7 +114,9 @@ namespace athernet
             float[] preambleBuffer = new float[SampleRate * 2];
 
             Preamble preamble = PreambleBuilder.Build();
-            PacketRecorder packetRecorder = new PacketRecorder(SampleRate, PacketLength * SamplesPerBit);
+            PacketRecorder packetRecorder = new PacketRecorder(SampleRate, (PacketLength) * SamplesPerBit);
+
+            //BinaryModulator Modulator = new BinaryPSKModulator(SampleRate, 8000, 1);
 
             Console.WriteLine($"{Recorder.WaveFormat.SampleRate} {Recorder.WaveFormat.Channels} {Recorder.WaveFormat.AverageBytesPerSecond} {Recorder.WaveFormat.BitsPerSample} {Recorder.WaveFormat.Encoding}");
 
@@ -135,7 +156,9 @@ namespace athernet
                     if (detectcnt > 10)
                     {
                         state = DecodeState.Decoding;
-                        int len = packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos);
+                        int len = packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos - 1);
+                        writeTempCsv(floatBuffer, "preamble_sample.csv");
+                        writeTempCsv(floatBuffer, "raw_samples.csv");
 
                         for (int i = 0; i < pos + len; i++)
                             preambleBuffer[i] = 0;
@@ -146,7 +169,9 @@ namespace athernet
 
                 if (state == DecodeState.Decoding)
                 {
-                    packetRecorder.AddSamples(floatBuffer, 0, floatBuffer.Length);
+                    int len = packetRecorder.AddSamples(floatBuffer, 0, floatBuffer.Length);
+                    for (int i = 0; i < len; i++)
+                        preambleBuffer[i] = 0;
                 }
             };
 
@@ -154,6 +179,9 @@ namespace athernet
             {
                 state = DecodeState.Syncing;
                 Console.WriteLine("New packet!");
+
+                writeTempCsv(packet.Samples, "samples.csv");
+
                 BitArray result = Modulator.Demodulate(packet);
                 for (int i = 0; i < PacketLength; i++)
                 {
@@ -161,7 +189,12 @@ namespace athernet
                     {
                         Console.WriteLine($"Wrong bit at {i}, should be {bitArray.Get(i)}");
                     }
+                    else
+                    {
+                        Console.WriteLine($"Correct bit at {i}: {bitArray.Get(i)}");
+                    }
                 }
+                Console.WriteLine("Finished");
             };
 
             Recorder.StartRecording();
