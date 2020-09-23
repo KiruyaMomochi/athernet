@@ -160,7 +160,7 @@ namespace athernet
                         detectcnt = 0;
                     }
 
-                    if (detectcnt > 10 & pos < 55000)
+                    if (detectcnt > 10 && pos < 55000)
                     {
                         packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos);
 
@@ -170,6 +170,7 @@ namespace athernet
                         state = DecodeState.Decoding;
                     }
                 }
+
                 if (state == DecodeState.Decoding)
                 {
                     packetRecorder.AddSamples(floatBuffer, 0, floatBuffer.Length);
@@ -179,7 +180,7 @@ namespace athernet
             packetRecorder.NewPacket += (sender, packet) =>
             {
                 Console.WriteLine("New packet!");
-                //state = DecodeState.Syncing;
+                state = DecodeState.Syncing;
                 pSK.Demodulate(packet);
             };
 
