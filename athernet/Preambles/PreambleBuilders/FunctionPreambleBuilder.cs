@@ -11,7 +11,7 @@ namespace athernet.Preambles.PreambleBuilders
         public FunctionPreambleBuilder(Func<float, float> buildFunction)
         {
             SampleRate = 48000;
-            SampleCount = 48000;
+            Time = 1;
             preamble = new float[SampleCount];
             for (int i = 0; i < SampleCount; i++)
             {
@@ -22,7 +22,7 @@ namespace athernet.Preambles.PreambleBuilders
         public FunctionPreambleBuilder(Func<int, int, float> buildFunction)
         {
             SampleRate = 48000;
-            SampleCount = 48000;
+            Time = 1;
             preamble = new float[SampleCount];
             for (int i = 0; i < SampleCount; i++)
             {
@@ -33,7 +33,7 @@ namespace athernet.Preambles.PreambleBuilders
         public FunctionPreambleBuilder(Func<int, int, int, float> buildFunction)
         {
             SampleRate = 48000;
-            SampleCount = 48000;
+            Time = 1;
             preamble = new float[SampleCount];
             for (int i = 0; i < SampleCount; i++)
             {
@@ -42,13 +42,13 @@ namespace athernet.Preambles.PreambleBuilders
         }
 
         public int SampleRate { get; set; }
-        public int SampleCount { get; set; }
+        public float Time { get; set; }
 
-        // TODO: Change time to constant
-        public float Time => SampleCount / SampleRate;
-        public Preamble Preamble
+        public int SampleCount => (int) (Time * SampleRate);
+
+        public Preamble Build()
         {
-            get => new Preamble(preamble)
+            return new Preamble((float[]) preamble.Clone())
             {
                 SampleRate = SampleRate
             };
