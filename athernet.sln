@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30404.54
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "athernet", "athernet\athernet.csproj", "{9CF87F5B-6205-4425-94FE-D6495DEAE822}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9CF87F5B-6205-4425-94FE-D6495DEAE822}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CF87F5B-6205-4425-94FE-D6495DEAE822}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CF87F5B-6205-4425-94FE-D6495DEAE822}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CF87F5B-6205-4425-94FE-D6495DEAE822}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E2B6CFCF-27FB-4DFE-9B7E-DA5A47001608}
+	EndGlobalSection
+EndGlobal
