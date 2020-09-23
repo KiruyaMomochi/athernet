@@ -16,12 +16,10 @@ namespace athernet.Recorders
         public int SampleLength => packet.Length;
 
         public WaveFormat WaveFormat { get; set; }
-        public PSKModulator PSKModulator { get; set; }
 
         public PacketRecorder(int sampleRate, int sampleLength)
         {
             packet = new Packet(sampleRate, sampleLength);
-            PSKModulator = new PSKModulator(SampleRate);
         }
 
         public delegate void NewPacketHandler(object sender, Packet p);
@@ -43,6 +41,7 @@ namespace athernet.Recorders
                     return i;
                 }
             }
+            Console.WriteLine($"Add samples {offset} and {count}");
 
             return count;
         }
