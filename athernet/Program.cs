@@ -14,50 +14,42 @@ namespace athernet
 {
     class Program
     {
-        static void Main(string[] args)
-        {   
-            Test();
-            //Preamble();
-            Record();
-            //Recorver();
-        }
-
-        static void Test()
+        static int SampleRate = 48000;
+        static int PacketLength = 100;
+        static int SamplesPerBit = 44;
+        static PSKModulator Modulator = new PSKModulator(SampleRate)
         {
-            PSKModulator pSK = new PSKModulator(48000)
-            {
-                SamplesPerBit = 88
-            };
+            SamplesPerBit = SamplesPerBit
+        };
+        static FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc)
+        {
+            SampleRate = SampleRate,
+            Time = 1
+        };
+        static WaveInEvent Recorder = new WaveInEvent()
+        {
+            DeviceNumber = 0,
+            WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 1)
+        };
 
-            //bool[] b = new bool[] { true, false, true, false, true, false };
+        static BitArray bitArray = new BitArray(PacketLength);
 
-            //BitArray bitArray = new BitArray(b);
-            BitArray bitArray = new BitArray(100);
+        static void Main(string[] args)
+        {
             for (int i = 0; i < 100; i += 2)
             {
                 bitArray.Set(i, true);
             }
 
-            var packet = pSK.Modulate(bitArray);
-            //var res = pSK.Demodulate(packet);
-            var preamble = new Preamble(PreambleBuilder().ToArray());
+            Play(bitArray);
+            Record();
+        }
 
+        static void Play(BitArray data)
+        {
+            var packet = Modulator.Modulate(data);
+            var preamble = PreambleBuilder.Build();
             var provider = new PacketSampleProvider(preamble, packet);
-
-
-            PSKModulator rawPSK = new PSKModulator(48000)
-            {
-                SamplesPerBit = 44,
-                Gain = new[]{1.0, 1.0}
-            };
-            var rawPacket = rawPSK.Modulate(bitArray);
-            float[] rawreal = preamble.Data.Concat(rawPacket.Samples).ToArray();
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), "raw.csv"), String.Join('\n', rawreal));
-
-            float[] real = preamble.Data.Concat(packet.Samples).ToArray();
-
-            Console.WriteLine(Path.Combine(Path.GetTempPath(), "template.csv"));
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), "template.csv"), String.Join('\n', real));
 
             using var wo = new WaveOutEvent();
             wo.Init(provider);
@@ -68,19 +60,10 @@ namespace athernet
             }
         }
 
-        static float[] PreambleBuilder(int sampleRate = 48000)
-        {
-            return new FunctionPreambleBuilder(PreambleFunc)
-            {
-                SampleRate = sampleRate,
-                SampleCount = sampleRate
-            }.Preamble.Data;
-        }
-
         static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
         {
-            float totalTime = (float) sampleCount / sampleRate;
-            float time = (float) nSample / sampleRate;
+            float totalTime = (float)sampleCount / sampleRate;
+            float time = (float)nSample / sampleRate;
             float frequencyMin = 4000;
             float frequencyMax = 9000;
 
@@ -109,32 +92,21 @@ namespace athernet
 
         static void Record()
         {
-            float[] preambleBuffer = new float[48000 * 2];
+            float[] preambleBuffer = new float[SampleRate * 2];
 
-            var recorder = new WaveInEvent()
-            {
-                DeviceNumber = 0,
-                WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 1)
-            };
+            Preamble preamble = PreambleBuilder.Build();
+            PacketRecorder packetRecorder = new PacketRecorder(SampleRate, PacketLength * SamplesPerBit);
 
-            Preamble preamble = new Preamble(PreambleBuilder(48000).ToArray());
-            PacketRecorder packetRecorder = new PacketRecorder(48000, 150 * 88);
-
-            Console.WriteLine($"{recorder.WaveFormat.SampleRate} {recorder.WaveFormat.Channels} {recorder.WaveFormat.AverageBytesPerSecond} {recorder.WaveFormat.BitsPerSample} {recorder.WaveFormat.Encoding}");
+            Console.WriteLine($"{Recorder.WaveFormat.SampleRate} {Recorder.WaveFormat.Channels} {Recorder.WaveFormat.AverageBytesPerSecond} {Recorder.WaveFormat.BitsPerSample} {Recorder.WaveFormat.Encoding}");
 
             int detectcnt = 0;
             DecodeState state = DecodeState.Syncing;
 
-            PSKModulator pSK = new PSKModulator(48000)
-            {
-                SamplesPerBit = 88
-            };
-
-            recorder.DataAvailable += (sender, args) =>
+            Recorder.DataAvailable += (sender, args) =>
             {
                 var buffer = new WaveBuffer(args.Buffer);
 
-                float[] floatBuffer = recorder.WaveFormat.BitsPerSample switch
+                float[] floatBuffer = Recorder.WaveFormat.BitsPerSample switch
                 {
                     16 => buffer.ShortBuffer.Take(args.BytesRecorded / 2).Select(x => (float)x).ToArray(),
                     32 => buffer.FloatBuffer.Take(args.BytesRecorded / 4).ToArray(),
@@ -160,14 +132,15 @@ namespace athernet
                         detectcnt = 0;
                     }
 
-                    if (detectcnt > 10 && pos < 55000)
+                    if (detectcnt > 10)
                     {
-                        packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos);
+                        state = DecodeState.Decoding;
+                        int len = packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos);
 
-                        File.WriteAllText(Path.Combine(Path.GetTempPath(), "fuck.csv"), String.Join('\n', preambleBuffer));
+                        for (int i = 0; i < pos + len; i++)
+                            preambleBuffer[i] = 0;
 
                         detectcnt = 0;
-                        state = DecodeState.Decoding;
                     }
                 }
 
@@ -179,16 +152,21 @@ namespace athernet
 
             packetRecorder.NewPacket += (sender, packet) =>
             {
-                Console.WriteLine("New packet!");
                 state = DecodeState.Syncing;
-                pSK.Demodulate(packet);
+                Console.WriteLine("New packet!");
+                BitArray result = Modulator.Demodulate(packet);
+                for (int i = 0; i < PacketLength; i++)
+                {
+                    if (result.Get(i) != bitArray.Get(i))
+                    {
+                        Console.WriteLine($"Wrong bit at {i}, should be {bitArray.Get(i)}");
+                    }
+                }
             };
 
-            //packetRecorder.StartRecording();
-            recorder.StartRecording();
+            Recorder.StartRecording();
             Thread.Sleep(1000000);
-            recorder.StopRecording();
-            //packetRecorder.StopRecording();
+            Recorder.StopRecording();
         }
 
     }

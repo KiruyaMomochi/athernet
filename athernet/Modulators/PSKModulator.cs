@@ -97,7 +97,7 @@ namespace athernet.Modulators
                     bitArray.Set(i, false);
                 }
 
-                Console.WriteLine($"{i}: {sum} {bitArray.Get(i)}");
+                //Console.WriteLine($"{i}: {sum} {bitArray.Get(i)}");
             }
 
             return bitArray;
