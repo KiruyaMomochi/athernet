@@ -11,17 +11,12 @@ namespace athernet.Preambles
 {
     class Preamble
     {
-        private readonly Convolver convolver;
-        private readonly int fftSize;
-
         public int SampleRate { get; set; }
 
         public Preamble(float[] preambleData)
         {
             SampleRate = 48000;
             Data = preambleData;
-            fftSize = Utils.Maths.Power2RoundUp(Data.Length * 2);
-            convolver = new Convolver(fftSize);
         }
 
         /// <summary>
@@ -37,8 +32,12 @@ namespace athernet.Preambles
         /// <returns>The position of local maximum if the preamble is found, otherwise 0.</returns>
         public (float max, int pos) Detect(float[] samples)
         {
-            float[] kernel = (float[])Data.Clone();
+            int maxSize = Math.Max(samples.Length, Data.Length);
+            int fftSize = Utils.Maths.Power2RoundUp(maxSize);
+            Convolver convolver = new Convolver(fftSize);
+
             float[] output = new float[fftSize];
+            float[] kernel = (float[])Data.Clone();
             convolver.CrossCorrelate(samples, kernel, output);
 
             float max = output.Max();
