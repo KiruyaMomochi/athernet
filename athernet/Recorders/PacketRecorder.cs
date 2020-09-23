@@ -49,6 +49,7 @@ namespace athernet.Recorders
 
         protected void RaiseNewPacketEvent()
         {
+            nSample = 0;
             NewPacket?.Invoke(this, packet.Copy());
         }
     }
