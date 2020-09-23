@@ -20,7 +20,7 @@ namespace athernet.Preambles
         {
             SampleRate = 48000;
             Data = preambleData;
-            fftSize = Utils.Power2RoundUp(Data.Length * 2);
+            fftSize = Utils.Maths.Power2RoundUp(Data.Length * 2);
             convolver = new Convolver(fftSize);
         }
 
