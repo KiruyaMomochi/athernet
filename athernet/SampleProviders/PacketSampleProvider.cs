@@ -22,13 +22,13 @@ namespace athernet.SampleProviders
 
         public int Read(float[] buffer, int offset, int count)
         {
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < count / WaveFormat.Channels; i++)
             {
                 if (!sampleEnumerator.MoveNext())
                 {
                     return i;
                 }
-                buffer[offset + i] = sampleEnumerator.Current;
+                buffer[offset++] = sampleEnumerator.Current;
             }
 
             return count;
