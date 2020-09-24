@@ -1,4 +1,5 @@
 ﻿using athernet.Packets;
+using athernet.SampleProviders;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections;
@@ -7,23 +8,22 @@ namespace athernet.Modulators
 {
     abstract class BinaryModulator
     {
-        protected SignalGenerator SignalGenertor()
+        protected SineGenerator SignalGenerator()
         {
-            return new SignalGenerator(SampleRate, 1)
+            return new SineGenerator(SampleRate, 1)
             {
-                Type = SignalGeneratorType.Sin,
                 Frequency = Frequency[0],
                 Gain = Gain[0]
             };
         }
 
-        protected virtual void One(SignalGenerator signal)
+        protected virtual void One(SineGenerator signal)
         {
             signal.Frequency = Frequency[0];
             signal.Gain = Gain[0];
         }
 
-        protected virtual void Zero(SignalGenerator signal)
+        protected virtual void Zero(SineGenerator signal)
         {
             signal.Frequency = Frequency[1];
             signal.Gain = Gain[1];
@@ -49,7 +49,7 @@ namespace athernet.Modulators
             int packetLength = bitArray.Length * SamplesPerBit;
             Packet packet = new Packet(SampleRate, packetLength);
             int nSample = 0;
-            SignalGenerator carrier = SignalGenertor();
+            SineGenerator carrier = SignalGenerator();
 
             foreach (bool bit in bitArray)
             {

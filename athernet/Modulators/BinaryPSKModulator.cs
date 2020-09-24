@@ -1,4 +1,5 @@
 ﻿using athernet.Packets;
+using athernet.SampleProviders;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections;
@@ -20,8 +21,7 @@ namespace athernet.Modulators
             int packetLength = packet.Length;
             int bitLength = packetLength / SamplesPerBit;
 
-            SignalGenerator carrier = SignalGenertor();
-            Zero(carrier);
+            SineGenerator carrier = SignalGenerator();
 
             BitArray bitArray = new BitArray(bitLength);
             int nSample = 0;
@@ -38,6 +38,8 @@ namespace athernet.Modulators
                     sum += packet.Samples[nSample] * carrierBuf[j];
                     nSample++;
                 }
+
+                Console.WriteLine(sum);
 
                 if (sum > 0)
                 {

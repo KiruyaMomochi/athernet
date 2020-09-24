@@ -1,4 +1,5 @@
 ﻿using athernet.Packets;
+using athernet.SampleProviders;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections;
@@ -11,14 +12,14 @@ namespace athernet.Modulators
     {
         private int lastIdx = 0;
 
-        protected override void One(SignalGenerator signal)
+        protected override void One(SineGenerator signal)
         {
             lastIdx ^= 1;
             signal.Frequency = Frequency[lastIdx];
             signal.Gain = Gain[lastIdx];
         }
 
-        protected override void Zero(SignalGenerator signal)
+        protected override void Zero(SineGenerator signal)
         {
             // Do nothing
         }
@@ -34,7 +35,7 @@ namespace athernet.Modulators
             int packetLength = (bitArray.Length + 1) * SamplesPerBit;
             Packet packet = new Packet(SampleRate, packetLength);
             int nSample = 0;
-            SignalGenerator carrier = SignalGenertor();
+            SineGenerator carrier = SignalGenerator();
 
             nSample += carrier.Read(packet.Samples, nSample, SamplesPerBit);
             foreach (bool bit in bitArray)
