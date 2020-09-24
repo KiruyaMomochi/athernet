@@ -18,12 +18,11 @@ namespace athernet
         static int SampleRate = 48000;
         static int PacketLength = 100;
         static int SamplesPerBit = 44;
-        static BinaryModulator Modulator = new BinaryPSKModulator(SampleRate, 8000, 1);
-        static FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc)
+        static DPSKModulator Modulator = new DPSKModulator(SampleRate, 8000, 1)
         {
-            SampleRate = SampleRate,
-            Time = 1
+            SamplesPerBit = SamplesPerBit
         };
+        static FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
         static WaveInEvent Recorder = new WaveInEvent()
         {
             DeviceNumber = 0,
@@ -46,9 +45,9 @@ namespace athernet
                 Gain = 1
             };
 
-            var rawSamples = new float[SampleRate * SamplesPerBit];
-            signal.Read(rawSamples, 0, rawSamples.Length);
-            writeTempCsv(rawSamples, "carrier.csv");
+            //var rawSamples = new float[SampleRate * SamplesPerBit];
+            //signal.Read(rawSamples, 0, rawSamples.Length);
+            //writeTempCsv(rawSamples, "carrier.csv");
 
             Play(bitArray);
             Record();
@@ -59,7 +58,6 @@ namespace athernet
             var packet = Modulator.Modulate(data);
             var preamble = PreambleBuilder.Build();
             var provider = new PacketSampleProvider(preamble, packet);
-
 
             writeTempCsv(preamble.Data, "preamble_template.csv");
             writeTempCsv(packet.Samples, "template.csv");
@@ -114,7 +112,7 @@ namespace athernet
             float[] preambleBuffer = new float[SampleRate * 2];
 
             Preamble preamble = PreambleBuilder.Build();
-            PacketRecorder packetRecorder = new PacketRecorder(SampleRate, (PacketLength) * SamplesPerBit);
+            PacketRecorder packetRecorder = new PacketRecorder(SampleRate, (PacketLength + 1) * SamplesPerBit);
 
             //BinaryModulator Modulator = new BinaryPSKModulator(SampleRate, 8000, 1);
 
@@ -143,7 +141,7 @@ namespace athernet
 
                     (max, pos) = preamble.Detect(preambleBuffer);
 
-                    if (max > 300)
+                    if (max > 100)
                     {
                         Console.WriteLine($"Detected maximum correlation: {max} at position {pos}");
                         detectcnt++;
@@ -157,8 +155,8 @@ namespace athernet
                     {
                         state = DecodeState.Decoding;
                         int len = packetRecorder.AddSamples(preambleBuffer, pos + 1, preambleBuffer.Length - pos - 1);
-                        writeTempCsv(floatBuffer, "preamble_sample.csv");
-                        writeTempCsv(floatBuffer, "raw_samples.csv");
+                        writeTempCsv(preambleBuffer.Skip(pos - preamble.Data.Length).Take(preamble.Data.Length).ToArray(), "preamble_sample.csv");
+                        writeTempCsv(preambleBuffer, "raw_samples.csv");
 
                         for (int i = 0; i < pos + len; i++)
                             preambleBuffer[i] = 0;
@@ -183,18 +181,22 @@ namespace athernet
                 writeTempCsv(packet.Samples, "samples.csv");
 
                 BitArray result = Modulator.Demodulate(packet);
+
+                int wrong = 0;
+
                 for (int i = 0; i < PacketLength; i++)
                 {
                     if (result.Get(i) != bitArray.Get(i))
                     {
-                        Console.WriteLine($"Wrong bit at {i}, should be {bitArray.Get(i)}");
+                        wrong++;
+                        //Console.WriteLine($"Wrong bit at {i}, should be {bitArray.Get(i)}");
                     }
-                    else
-                    {
-                        Console.WriteLine($"Correct bit at {i}: {bitArray.Get(i)}");
-                    }
+                    //else
+                    //{
+                    //    Console.WriteLine($"Correct bit at {i}: {bitArray.Get(i)}");
+                    //}
                 }
-                Console.WriteLine("Finished");
+                Console.WriteLine($"Wrong: {wrong}");
             };
 
             Recorder.StartRecording();
