@@ -1,8 +1,12 @@
 ﻿using athernet.Packets;
+using athernet.Utils;
 using NAudio.Wave.SampleProviders;
+using NWaves.Signals;
+using NWaves.Transforms;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace athernet.Modulators
@@ -24,6 +28,13 @@ namespace athernet.Modulators
 
             float[] carrierBuf = new float[SamplesPerBit];
             carrier.Read(carrierBuf, 0, SamplesPerBit);
+
+            HilbertTransform hilbert = new HilbertTransform(Maths.Power2RoundUp(SamplesPerBit) / 2, false);
+            var syncsamp = packet.Samples.Take(SamplesPerBit).ToArray();
+            carrier = SignalGenertor();
+            var signal = hilbert.AnalyticSignal(syncsamp);
+            var phase = signal.Phase();
+            Console.WriteLine($"Phase: {phase[0]}");
 
             float sum = 0;
             for (int j = 0; j < SamplesPerBit; j++)
