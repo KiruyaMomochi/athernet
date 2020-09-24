@@ -23,6 +23,7 @@ namespace athernet.Modulators
             int nSample = 0;
 
             float[] carrierBuf = new float[SamplesPerBit];
+            carrier.Read(carrierBuf, 0, SamplesPerBit);
 
             float sum = 0;
             for (int j = 0; j < SamplesPerBit; j++)
