@@ -7,9 +7,9 @@ using System.Text;
 
 namespace athernet.Modulators
 {
-    class DifferentialBinaryPSKModulator : DifferentialBinaryModulator
+    class DPSKModulator : DifferentialBinaryModulator
     {
-        public DifferentialBinaryPSKModulator(int sampleRate, double frequncy, double gain) : base(sampleRate, frequncy, gain) { }
+        public DPSKModulator(int sampleRate, double frequncy, double gain) : base(sampleRate, frequncy, gain) { }
 
         public override BitArray Demodulate(Packet packet)
         {
@@ -30,7 +30,7 @@ namespace athernet.Modulators
                 sum += packet.Samples[nSample] * carrierBuf[j];
                 nSample++;
             }
-            bool lastData = false;
+            bool lastData = sum > 0;
 
             for (int i = 0; i < bitLength; i++)
             {
