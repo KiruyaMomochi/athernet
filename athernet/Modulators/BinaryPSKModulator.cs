@@ -1,10 +1,6 @@
-﻿using athernet.Packets;
-using athernet.SampleProviders;
-using NAudio.Wave.SampleProviders;
+﻿using athernet.SampleProviders;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Text;
 
 namespace athernet.Modulators
 {
@@ -16,26 +12,26 @@ namespace athernet.Modulators
                 new double[] { gain, -gain })
         { }
 
-        public override BitArray Demodulate(Packet packet)
+        public override BitArray Demodulate(float[] samples)
         {
-            int packetLength = packet.Length;
-            int bitLength = packetLength / SamplesPerBit;
+            int packetLength = samples.Length;
+            int bitLength = packetLength / BitDepth;
 
             SineGenerator carrier = SignalGenerator();
 
-            BitArray bitArray = new BitArray(bitLength);
+            BitArray frame = new BitArray(bitLength);
             int nSample = 0;
 
-            float[] carrierBuf = new float[SamplesPerBit];
+            float[] carrierBuf = new float[BitDepth];
 
             for (int i = 0; i < bitLength; i++)
             {
-                carrier.Read(carrierBuf, 0, SamplesPerBit);
+                carrier.Read(carrierBuf, 0, BitDepth);
                 float sum = 0;
 
-                for (int j = 0; j < SamplesPerBit; j++)
+                for (int j = 0; j < BitDepth; j++)
                 {
-                    sum += packet.Samples[nSample] * carrierBuf[j];
+                    sum += samples[nSample] * carrierBuf[j];
                     nSample++;
                 }
 
@@ -43,15 +39,15 @@ namespace athernet.Modulators
 
                 if (sum > 0)
                 {
-                    bitArray.Set(i, true);
+                    frame.Set(i, true);
                 }
                 else
                 {
-                    bitArray.Set(i, false);
+                    frame.Set(i, false);
                 }
             }
 
-            return bitArray;
+            return frame;
         }
     }
 }

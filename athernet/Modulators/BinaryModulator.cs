@@ -1,7 +1,4 @@
-﻿using athernet.Packets;
-using athernet.SampleProviders;
-using NAudio.Wave.SampleProviders;
-using System;
+﻿using athernet.SampleProviders;
 using System.Collections;
 
 namespace athernet.Modulators
@@ -34,35 +31,33 @@ namespace athernet.Modulators
             Frequency = frequncy;
             Gain = gain;
             SampleRate = sampleRate;
-            SamplesPerBit = 44;
+            BitDepth = 44;
         }
 
         public double[] Frequency { get; set; }
         public double[] Gain { get; set; }
-        public int SamplesPerBit { get; set; }
+        public int BitDepth { get; set; }
+        public int SampleRate { get; set; }
 
-        public int SampleRate;
-
-        // Offline Methods
-        public virtual Packet Modulate(BitArray bitArray)
+        public virtual float[] Modulate(BitArray frame)
         {
-            int packetLength = bitArray.Length * SamplesPerBit;
-            Packet packet = new Packet(SampleRate, packetLength);
+            int packetLength = frame.Length * BitDepth;
+            float[] samples = new float[packetLength];
             int nSample = 0;
             SineGenerator carrier = SignalGenerator();
 
-            foreach (bool bit in bitArray)
+            foreach (bool bit in frame)
             {
                 if (bit)
                     One(carrier);
                 else
                     Zero(carrier);
-                nSample += carrier.Read(packet.Samples, nSample, SamplesPerBit);
+                nSample += carrier.Read(samples, nSample, BitDepth);
             }
 
-            return packet;
+            return samples;
         }
 
-        public abstract BitArray Demodulate(Packet packet);
+        public abstract BitArray Demodulate(float[] frame);
     }
 }
