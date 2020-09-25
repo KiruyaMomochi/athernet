@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace athernet.Modulators
 {
-    abstract class BinaryModulator
+    abstract class BinaryModulator: IModulator
     {
         protected SineGenerator SignalGenerator()
         {
