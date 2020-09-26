@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace athernet.Modulators
 {
-    abstract class DifferentialBinaryModulator: BinaryModulator
+    abstract class DifferentialBinaryModulator : BinaryModulator
     {
         private int lastIdx = 0;
 
