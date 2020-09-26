@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -57,6 +58,15 @@ namespace athernet.Utils
                 Console.WriteLine($"ICMPListener received {bytesRead} from {remoteEndPoint}");
                 Console.WriteLine(BitConverter.ToString(buffer));
             }
+        }
+    }
+
+    static class Debug
+    {
+        internal static void writeTempCsv(float[] buffer, string fileName)
+        {
+            var path = Path.Combine(Path.GetTempPath(), fileName);
+            File.WriteAllText(path, String.Join(", ", buffer));
         }
     }
 }
