@@ -46,12 +46,9 @@ namespace athernet.Preambles.PreambleBuilders
 
         public int SampleCount => (int) (SampleRate * Time);
 
-        public Preamble Build()
+        public float[] Build()
         {
-            return new Preamble((float[]) preamble.Clone())
-            {
-                SampleRate = SampleRate
-            };
+            return (float[])preamble.Clone();
         }
     }
 }
