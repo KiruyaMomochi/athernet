@@ -1,4 +1,5 @@
 ﻿using athernet.SampleProviders;
+using NWaves.Signals;
 using System;
 using System.Collections;
 using System.Linq;
@@ -48,11 +49,13 @@ namespace athernet.Modulators
 
             SineGenerator carrier = SignalGenerator();
             BitArray frame = new BitArray(bitLength);
-            int nSample = 0;
+            int nSample;
 
             var syncsamp = samples.Take(BitDepth).ToArray();
             carrier.PhaseShift = findPhase(syncsamp);
             Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
+
+            //Utils.Debug.writeTempCsv(samples, "samples.csv");
 
             //SineGenerator signal = SignalGenerator();
             //signal.PhaseShift = findPhase(syncsamp);
@@ -60,25 +63,41 @@ namespace athernet.Modulators
             //signal.Read(rawSamples, 0, rawSamples.Length);
             //writeTempCsv(rawSamples, "carrier.csv");
 
-            float[] carrierBuf = new float[BitDepth];
+            var sums = new float[samples.Length];
 
-            carrier.Read(carrierBuf, 0, BitDepth);
+            //samples = ApplyFiltersBeforeMultiply(samples);
+
+            float[] carrierBuf = new float[BitDepth];
+            nSample = 0;
+            for (int i = 0; i < bitLength + 1; i++)
+            {
+                carrier.Read(carrierBuf, 0, BitDepth);
+                for (int j = 0; j < BitDepth; j++)
+                {
+                    sums[nSample] = samples[nSample] * carrierBuf[j];
+                    nSample++;
+                }
+            }
+
+            //Utils.Debug.writeTempCsv(sums, "sums.csv");
+
+            //sums = ApplyFiltersAfterMultiply(sums);
+
             float sum = 0;
+            nSample = 0;
             for (int j = 0; j < BitDepth; j++)
             {
-                sum += samples[nSample] * carrierBuf[j];
+                sum += sums[nSample];
                 nSample++;
             }
             bool lastData = sum > 0;
 
             for (int i = 0; i < bitLength; i++)
             {
-                carrier.Read(carrierBuf, 0, BitDepth);
-
                 sum = 0;
                 for (int j = 0; j < BitDepth; j++)
                 {
-                    sum += samples[nSample] * carrierBuf[j];
+                    sum += sums[nSample];
                     nSample++;
                 }
 
@@ -87,6 +106,32 @@ namespace athernet.Modulators
             }
 
             return frame;
+        }
+
+        private float[] ApplyFiltersAfterMultiply(float[] samples)
+        {
+            //return samples;
+            var deltaPass = 0.96;
+            var deltaStop = 0.04;
+
+            var ripplePassDb = NWaves.Utils.Scale.ToDecibel(1 / deltaPass);
+            var attenuateDb = NWaves.Utils.Scale.ToDecibel(1 / deltaStop);
+
+            var ellip = new NWaves.Filters.Elliptic.LowPassFilter(Frequency[0]*2, 1, ripplePassDb, attenuateDb);
+
+            //var biquad = new NWaves.Filters.BiQuad.LowPassFilter(Frequency[0] * 2);
+
+            var signal = new DiscreteSignal(SampleRate, samples);
+            return ellip.ApplyTo(signal).Samples;
+        }
+
+        private float[] ApplyFiltersBeforeMultiply(float[] samples)
+        {
+            //return samples;
+            var cheb1 = new NWaves.Filters.ChebyshevI.HighPassFilter(Frequency[0], 1);
+
+            var signal = new DiscreteSignal(SampleRate, samples);
+            return cheb1.ApplyTo(signal).Samples;
         }
     }
 }
