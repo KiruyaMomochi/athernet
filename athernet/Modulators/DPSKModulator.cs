@@ -104,10 +104,10 @@ namespace athernet.Modulators
         private float[] ApplyFiltersAfterMultiply(float[] samples)
         {
             var onepole = new NWaves.Filters.OnePole.LowPassFilter(Frequency[0] * 2);
-            var ma = new NWaves.Filters.MovingAverageFilter(SampleRate / (int) Frequency[0]);
+            //var ma = new NWaves.Filters.MovingAverageFilter(SampleRate / (int) Frequency[0]);
 
             var signal = new DiscreteSignal(SampleRate, samples);
-            return ma.ApplyTo(onepole.ApplyTo(signal)).Samples;
+            return onepole.ApplyTo(signal).Samples;
         }
 
         private float[] ApplyFiltersBeforeMultiply(float[] samples)
