@@ -36,12 +36,6 @@ namespace athernet.Modulators
             return maxPhase;
         }
 
-        //static private void writeTempCsv(float[] buffer, string fileName)
-        //{
-        //    var path = Path.Combine(Path.GetTempPath(), fileName);
-        //    File.WriteAllText(path, String.Join(", ", buffer));
-        //}
-
         public override BitArray Demodulate(float[] samples)
         {
             int packetLength = samples.Length;
@@ -104,7 +98,6 @@ namespace athernet.Modulators
         private float[] ApplyFiltersAfterMultiply(float[] samples)
         {
             var onepole = new NWaves.Filters.OnePole.LowPassFilter(Frequency[0] * 2);
-            //var ma = new NWaves.Filters.MovingAverageFilter(SampleRate / (int) Frequency[0]);
 
             var signal = new DiscreteSignal(SampleRate, samples);
             return onepole.ApplyTo(signal).Samples;
@@ -112,7 +105,6 @@ namespace athernet.Modulators
 
         private float[] ApplyFiltersBeforeMultiply(float[] samples)
         {
-            //return samples;
             var cheb1 = new NWaves.Filters.ChebyshevI.HighPassFilter(Frequency[0], 1);
 
             var signal = new DiscreteSignal(SampleRate, samples);
