@@ -76,40 +76,40 @@ namespace athernet
             var playSamples = new ActionBlock<float[]>(PlaySamples);
 
             var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
-
-            splitBitArray.Post(bitArray);
             splitBitArray.LinkTo(modulateArray, linkOptions);
             modulateArray.LinkTo(playSamples, linkOptions);
 
+            splitBitArray.Post(bitArray);
             splitBitArray.Complete();
             playSamples.Completion.Wait();
         }
 
-        public void Record()
+        private void OnDataAvailable(BitArray obj)
+        {
+            var handler = DataAvailable;
+            handler?.Invoke(this, obj);
+        }
+
+        public event EventHandler<BitArray> DataAvailable;
+        private WaveInEvent recorder;
+
+        public void StartRecording()
         {
             var demodulateSamples = new TransformBlock<float[], BitArray>(DemodulateSamples);
-            var printResult = new ActionBlock<BitArray>(PrintResult);
+            var dataAvailable = new ActionBlock<BitArray>(OnDataAvailable);
 
-            using WaveInEvent recorder = new WaveInEvent() { WaveFormat = WaveFormat };
+            //var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
+            demodulateSamples.LinkTo(dataAvailable);
+
+            recorder = new WaveInEvent() { WaveFormat = WaveFormat };
             recorder.DataAvailable += (s, e) => Recorder_DataAvailable(e, demodulateSamples);
 
             recorder.StartRecording();
-            demodulateSamples.LinkTo(printResult);
-            Thread.Sleep(1000000);
         }
 
-        private void PrintResult(BitArray bits)
+        public void StopRecording()
         {
-            foreach (var bit in bits)
-            {
-                Console.Write(bit switch
-                {
-                    true => "\nT",
-                    false => "F",
-                    _ => throw new NotImplementedException()
-                } + " ");
-            }
-            Console.WriteLine();
+            recorder.StopRecording();
         }
 
         private float[] buffer = new float[0];
@@ -118,7 +118,6 @@ namespace athernet
 
         private void Recorder_DataAvailable(WaveInEventArgs e, TransformBlock<float[], BitArray> b)
         {
-            //Console.WriteLine($"Recorded {e.BytesRecorded} bytes.");
             var data = ToFloatBuffer(e.Buffer, e.BytesRecorded);
 
             if (decoding)
