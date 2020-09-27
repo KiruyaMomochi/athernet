@@ -57,12 +57,6 @@ namespace athernet.Modulators
 
             //Utils.Debug.writeTempCsv(samples, "samples.csv");
 
-            //SineGenerator signal = SignalGenerator();
-            //signal.PhaseShift = findPhase(syncsamp);
-            //var rawSamples = new float[SampleRate * SamplesPerBit];
-            //signal.Read(rawSamples, 0, rawSamples.Length);
-            //writeTempCsv(rawSamples, "carrier.csv");
-
             var sums = new float[samples.Length];
 
             //samples = ApplyFiltersBeforeMultiply(samples);
