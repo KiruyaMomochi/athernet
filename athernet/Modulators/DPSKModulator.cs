@@ -38,26 +38,13 @@ namespace athernet.Modulators
             return maxPhase;
         }
 
-        public override BitArray Demodulate(float[] samples)
+        private float[] CalcSum(float[] samples, int bitLength, SineGenerator carrier)
         {
-            int packetLength = samples.Length;
-            int bitLength = packetLength / BitDepth - 1;
-
-            SineGenerator carrier = SignalGenerator();
-            BitArray frame = new BitArray(bitLength);
-            int nSample;
-
-            var syncsamp = samples.Take(BitDepth).ToArray();
-            carrier.PhaseShift = FindPhase(syncsamp);
-            Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
-
-            Utils.Debug.writeTempCsv(samples, "samples.csv");
-            samples = ApplyFiltersBeforeMultiply(samples);
-
+            carrier.Reset();
             var sums = new float[samples.Length];
 
             float[] carrierBuf = new float[BitDepth];
-            nSample = 0;
+            int nSample = 0;
             for (int i = 0; i < bitLength + 1; i++)
             {
                 carrier.Read(carrierBuf, 0, BitDepth);
@@ -67,11 +54,34 @@ namespace athernet.Modulators
                     nSample++;
                 }
             }
+            return sums;
+        }
 
-            Utils.Debug.writeTempCsv(sums, "sums.csv");
+        public override BitArray Demodulate(float[] samples)
+        {
+            int packetLength = samples.Length;
+            int bitLength = packetLength / BitDepth - 1;
 
+            SineGenerator carrier = SignalGenerator();
+
+            var syncsamp = samples.Take(BitDepth).ToArray();
+            carrier.PhaseShift = FindPhase(syncsamp);
+            Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
+
+            Utils.Debug.writeTempCsv(samples, "samples.csv");
+            samples = ApplyFiltersBeforeMultiply(samples);
+
+            var sums = CalcSum(samples, bitLength, carrier);
             sums = ApplyFiltersAfterMultiply(sums);
 
+            return FindFrame(sums, bitLength);
+        }
+
+        private BitArray FindFrame(float[] sums, int bitLength)
+        {
+            BitArray frame = new BitArray(bitLength);
+
+            int nSample;
             float sum = 0;
             nSample = 0;
             for (int j = 0; j < BitDepth; j++)
