@@ -66,7 +66,7 @@ namespace athernet.Modulators
 
             var syncsamp = samples.Take(BitDepth).ToArray();
             carrier.PhaseShift = FindPhase(syncsamp);
-            Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
+            //Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
 
             samples = ApplyFiltersBeforeMultiply(samples);
 

@@ -35,8 +35,6 @@ namespace athernet.Modulators
                     nSample++;
                 }
 
-                Console.WriteLine(sum);
-
                 if (sum > 0)
                 {
                     frame.Set(i, true);
