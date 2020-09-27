@@ -67,6 +67,7 @@ namespace Athernet
 
         private void PlaySamples(float[] samples)
         {
+            // TODO: Exploit
             var provider = new MonoToStereoSampleProvider(new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples)))
             {
                 LeftVolume = 0.0f,
