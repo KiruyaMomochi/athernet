@@ -9,19 +9,13 @@ namespace athernet
 {
     class Program
     {
-        static int SampleRate = 48000;
-        static int PacketLength = 1000;
-        static int SamplesPerBit = 44;
-        static DPSKModulator Modulator = new DPSKModulator(SampleRate, 8000, 1)
-        {
-            BitDepth = SamplesPerBit
-        };
-        static FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
-        static BitArray bitArray = new BitArray(PacketLength);
 
         static void Main(string[] args)
         {
-            for (int i = 0, j = 0; i < 1000; i += j, j++)
+            int PacketLength = 10000;
+            BitArray bitArray = new BitArray(PacketLength);
+            FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
+            for (int i = 0, j = 0; i < PacketLength; i += j, j++)
             {
                 bitArray.Set(i, true);
             }
@@ -31,10 +25,13 @@ namespace athernet
                 Preamble = PreambleBuilder.Build(),
                 FrameBodyBits = 1000
             };
-            athernet.Record();
-            //athernet.Play(bitArray);
-            //Console.WriteLine(WaveIn.GetCapabilities(0).ProductName);
-            //athernet.Play(new BitArray(1000, false));
+            athernet.DataAvailable += Athernet_DataAvailable;
+            athernet.StartRecording();
+        }
+
+        private static void Athernet_DataAvailable(object sender, BitArray e)
+        {
+            Utils.Debug.PrintResult(e);
         }
 
         static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
