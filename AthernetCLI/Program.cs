@@ -11,7 +11,7 @@ namespace AthernetCLI
 {
     class Program
     {
-        static int PacketLength = 15000;
+        static int PacketLength;
 
         static BitArray template;
 
@@ -31,6 +31,8 @@ namespace AthernetCLI
                 _ => throw new NotImplementedException(),
             });
             template = new BitArray(arr.ToArray());
+
+            PacketLength = template.Length;
 
             if (args.Length > 0)
             {
