@@ -10,7 +10,7 @@ namespace athernet.Modulators
     {
         public DPSKModulator(int sampleRate, double frequncy, double gain) : base(sampleRate, frequncy, gain) { }
 
-        private float findPhase(float[] signal)
+        private float FindPhase(float[] signal)
         {
             float maxSum = 0;
             float maxPhase = 0;
@@ -46,7 +46,7 @@ namespace athernet.Modulators
             int nSample;
 
             var syncsamp = samples.Take(BitDepth).ToArray();
-            carrier.PhaseShift = findPhase(syncsamp);
+            carrier.PhaseShift = FindPhase(syncsamp);
             Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
 
             Utils.Debug.writeTempCsv(samples, "samples.csv");
