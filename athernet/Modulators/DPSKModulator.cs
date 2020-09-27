@@ -55,11 +55,10 @@ namespace athernet.Modulators
             carrier.PhaseShift = findPhase(syncsamp);
             Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
 
-            //Utils.Debug.writeTempCsv(samples, "samples.csv");
+            Utils.Debug.writeTempCsv(samples, "samples.csv");
+            samples = ApplyFiltersBeforeMultiply(samples);
 
             var sums = new float[samples.Length];
-
-            //samples = ApplyFiltersBeforeMultiply(samples);
 
             float[] carrierBuf = new float[BitDepth];
             nSample = 0;
@@ -73,9 +72,9 @@ namespace athernet.Modulators
                 }
             }
 
-            //Utils.Debug.writeTempCsv(sums, "sums.csv");
+            Utils.Debug.writeTempCsv(sums, "sums.csv");
 
-            //sums = ApplyFiltersAfterMultiply(sums);
+            sums = ApplyFiltersAfterMultiply(sums);
 
             float sum = 0;
             nSample = 0;
@@ -104,19 +103,11 @@ namespace athernet.Modulators
 
         private float[] ApplyFiltersAfterMultiply(float[] samples)
         {
-            //return samples;
-            var deltaPass = 0.96;
-            var deltaStop = 0.04;
-
-            var ripplePassDb = NWaves.Utils.Scale.ToDecibel(1 / deltaPass);
-            var attenuateDb = NWaves.Utils.Scale.ToDecibel(1 / deltaStop);
-
-            var ellip = new NWaves.Filters.Elliptic.LowPassFilter(Frequency[0]*2, 1, ripplePassDb, attenuateDb);
-
-            //var biquad = new NWaves.Filters.BiQuad.LowPassFilter(Frequency[0] * 2);
+            var onepole = new NWaves.Filters.OnePole.LowPassFilter(Frequency[0] * 2);
+            var ma = new NWaves.Filters.MovingAverageFilter(SampleRate / (int) Frequency[0]);
 
             var signal = new DiscreteSignal(SampleRate, samples);
-            return ellip.ApplyTo(signal).Samples;
+            return ma.ApplyTo(onepole.ApplyTo(signal)).Samples;
         }
 
         private float[] ApplyFiltersBeforeMultiply(float[] samples)
