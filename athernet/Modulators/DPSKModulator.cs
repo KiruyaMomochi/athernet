@@ -68,7 +68,6 @@ namespace athernet.Modulators
             carrier.PhaseShift = FindPhase(syncsamp);
             Console.WriteLine($"Phase shift: {carrier.PhaseShift}");
 
-            Utils.Debug.writeTempCsv(samples, "samples.csv");
             samples = ApplyFiltersBeforeMultiply(samples);
 
             var sums = CalcSum(samples, bitLength, carrier);
