@@ -4,13 +4,13 @@ using NAudio.Wave;
 
 namespace Athernet.SampleProviders
 {
-    public class RawSampleProvider : ISampleProvider
+    public class MonoRawSampleProvider : ISampleProvider
     {
         private readonly IEnumerator<float> sampleEnumerator;
 
         public WaveFormat WaveFormat { get; }
-        public RawSampleProvider(IEnumerable<float> data) : this(48000, data) { }
-        public RawSampleProvider(int sampleRate, IEnumerable<float> data)
+        public MonoRawSampleProvider(IEnumerable<float> data) : this(48000, data) { }
+        public MonoRawSampleProvider(int sampleRate, IEnumerable<float> data)
         {
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             sampleEnumerator = data.GetEnumerator();
