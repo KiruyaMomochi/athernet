@@ -4,35 +4,87 @@ using System.Collections;
 using Athernet.Modulators;
 using Athernet.Preambles.PreambleBuilders;
 using System.Threading;
+using System.IO;
+using System.Linq;
 
 namespace AthernetCLI
 {
     class Program
     {
+        static int PacketLength = 15000;
+
+        static BitArray template;
 
         static void Main(string[] args)
         {
-            int PacketLength = 10000;
-            BitArray bitArray = new BitArray(PacketLength);
             FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
-            for (int i = 0, j = 0; i < PacketLength; i += j, j++)
+            var athernet = new Athernet.Athernet(48000, 30, PreambleBuilder.Build())
             {
-                bitArray.Set(i, true);
-            }
-
-            var athernet = new Athernet.Athernet()
-            {
-                Preamble = PreambleBuilder.Build(),
-                FrameBodyBits = 1000
+                FrameBodyBits = 2000
             };
-            athernet.DataAvailable += Athernet_DataAvailable;
-            athernet.StartRecording();
-            Thread.Sleep(100000);
+
+            var file = File.ReadAllText("data.txt");
+            var arr = file.Split()[0].Select(x => x switch
+            {
+                '0' => false,
+                '1' => true,
+                _ => throw new NotImplementedException(),
+            });
+            template = new BitArray(arr.ToArray());
+
+            if (args.Length > 0)
+            {
+                switch (args[0])
+                {
+                    case "play":
+                        athernet.Play(template);
+                        break;
+                    case "record":
+                        Receive(athernet);
+                        break;
+                    default:
+                        Console.WriteLine("?");
+                        break;
+                };
+            }
+            else
+            {
+                Receive(athernet);
+            }
         }
 
-        private static void Athernet_DataAvailable(object sender, BitArray e)
+        static void Receive(Athernet.Athernet athernet)
         {
-            Athernet.Utils.Debug.PrintResult(e);
+            BitArray bitArray = new BitArray(PacketLength);
+            int wrong = 0;
+            int idx = 0;
+            athernet.DataAvailable += (s, e) =>
+            {
+                int lcWrong = 0;
+                for (int i = 0; i < e.Length && idx < PacketLength; i++)
+                {
+                    if (e[i] != template[idx])
+                    {
+                        lcWrong++;
+                    }
+                    idx++;
+                }
+                wrong += lcWrong;
+                Console.WriteLine(lcWrong);
+
+                if (idx == PacketLength)
+                {
+                    athernet.StopRecording();
+                    Console.WriteLine("Stopped.");
+                    Console.WriteLine(wrong);
+                }
+            };
+            athernet.StartRecording();
+            Console.WriteLine("Recording.");
+            while (athernet.IsRecording)
+            {
+                Thread.Sleep(500);
+            }
         }
 
         static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
