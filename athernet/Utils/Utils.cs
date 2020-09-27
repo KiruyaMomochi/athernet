@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -67,6 +68,20 @@ namespace athernet.Utils
         {
             var path = Path.Combine(Path.GetTempPath(), fileName);
             File.WriteAllText(path, String.Join(", ", buffer));
+        }
+
+        internal static void PrintResult(BitArray bits)
+        {
+            foreach (var bit in bits)
+            {
+                Console.Write(bit switch
+                {
+                    true => "\nT",
+                    false => "F",
+                    _ => throw new NotImplementedException()
+                } + " ");
+            }
+            Console.WriteLine();
         }
     }
 }
