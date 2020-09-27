@@ -44,5 +44,10 @@ namespace athernet.SampleProviders
             }
             return count;
         }
+
+        public void Reset()
+        {
+            nSample = 0;
+        }
     }
 }

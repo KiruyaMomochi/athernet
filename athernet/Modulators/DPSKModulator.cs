@@ -16,11 +16,11 @@ namespace athernet.Modulators
             float maxPhase = 0;
 
             float[] carrierBuf = new float[BitDepth];
+            var carrier = SignalGenerator();
 
             for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.1f)
             {
                 float sum = 0;
-                var carrier = SignalGenerator();
                 carrier.PhaseShift = i;
                 carrier.Read(carrierBuf, 0, BitDepth);
                 for (int j = 0; j < BitDepth; j++)
@@ -32,7 +32,9 @@ namespace athernet.Modulators
                     maxSum = sum;
                     maxPhase = i;
                 }
+                carrier.Reset();
             }
+
             return maxPhase;
         }
 
