@@ -2,6 +2,7 @@
 using Athernet.Preambles.PreambleDetectors;
 using Athernet.SampleProviders;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,14 +15,19 @@ namespace Athernet
 {
     public class Athernet
     {
-        public Athernet()
+        public Athernet(int sampleRate, int bitDepth, float[] preamble)
         {
-            SampleRate = 48000;
-            BitDepth = 44;
-            Preamble = new float[0];
+            SampleRate = sampleRate;
+            BitDepth = bitDepth;
+            Preamble = preamble;
             FrameBodyBits = 100;
-            Modulator = new DPSKModulator(SampleRate, 8000, 1);
+            Modulator = new DPSKModulator(SampleRate, 8000, 1)
+            {
+                BitDepth = BitDepth
+            };
         }
+
+        public Athernet(float[] preamble) : this(48000, 44, preamble) { }
 
         public int SampleRate { get; set; }
         public int BitDepth { get; set; }
@@ -57,16 +63,24 @@ namespace Athernet
             return target;
         }
 
+        private WaveOutEvent wo = new WaveOutEvent();
+
         private void PlaySamples(float[] samples)
         {
-            var provider = new RawSampleProvider(SampleRate, Preamble.Concat(samples));
-            using WaveOutEvent wo = new WaveOutEvent();
+            var provider = new MonoToStereoSampleProvider(new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples)))
+            {
+                LeftVolume = 0.0f,
+                RightVolume = 1.0f
+            };
             wo.Init(provider);
             wo.Play();
+            Thread.Sleep(samples.Length * 1000 / SampleRate + 100);
+
             while (wo.PlaybackState == PlaybackState.Playing)
             {
-                Thread.Sleep(500);
+                Thread.Sleep(10);
             }
+            wo.Dispose();
         }
 
         public void Play(BitArray bitArray)
@@ -92,6 +106,7 @@ namespace Athernet
 
         public event EventHandler<BitArray> DataAvailable;
         private WaveInEvent recorder;
+        public bool IsRecording;
 
         public void StartRecording()
         {
@@ -105,11 +120,13 @@ namespace Athernet
             recorder.DataAvailable += (s, e) => Recorder_DataAvailable(e, demodulateSamples);
 
             recorder.StartRecording();
+            IsRecording = true;
         }
 
         public void StopRecording()
         {
             recorder.StopRecording();
+            IsRecording = false;
         }
 
         private float[] buffer = new float[0];
