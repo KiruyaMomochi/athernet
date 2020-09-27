@@ -1,6 +1,6 @@
-﻿using athernet.Modulators;
-using athernet.Preambles;
-using athernet.SampleProviders;
+﻿using Athernet.Modulators;
+using Athernet.Preambles.PreambleDetectors;
+using Athernet.SampleProviders;
 using NAudio.Wave;
 using System;
 using System.Collections;
@@ -10,9 +10,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 
-namespace athernet
+namespace Athernet
 {
-    class Athernet
+    public class Athernet
     {
         public Athernet()
         {
@@ -142,7 +142,7 @@ namespace athernet
                 buffer = buffer.TakeLast(Preamble.Length).Concat(data).ToArray();
             }
 
-            int? pos = CrossCorrelationDetector.Detect(buffer, Preamble);
+            int? pos = new CrossCorrelationDetector().Detect(buffer, Preamble);
 
             if (pos is int ipos)
             {

@@ -1,4 +1,4 @@
-﻿using athernet.SampleProviders;
+﻿using Athernet.SampleProviders;
 using NAudio.Wave;
 using NWaves.Operations.Convolution;
 using System;
@@ -7,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace athernet.Preambles
+namespace Athernet.Preambles.PreambleDetectors
 {
-    class CrossCorrelationDetector
+    public class CrossCorrelationDetector
     {
         public int LocalMaximumThreshold { get; set; } = 15;
         public int DetectFactor { get; set; } = 2;

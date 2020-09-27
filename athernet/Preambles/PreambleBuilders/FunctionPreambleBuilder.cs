@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace athernet.Preambles.PreambleBuilders
+namespace Athernet.Preambles.PreambleBuilders
 {
-    class FunctionPreambleBuilder
+    public class FunctionPreambleBuilder
     {
         private readonly float[] preamble;
 

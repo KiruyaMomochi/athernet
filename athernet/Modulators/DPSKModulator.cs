@@ -1,12 +1,12 @@
-﻿using athernet.SampleProviders;
+﻿using Athernet.SampleProviders;
 using NWaves.Signals;
 using System;
 using System.Collections;
 using System.Linq;
 
-namespace athernet.Modulators
+namespace Athernet.Modulators
 {
-    class DPSKModulator : DifferentialBinaryModulator
+    public class DPSKModulator : DifferentialBinaryModulator
     {
         public DPSKModulator(int sampleRate, double frequncy, double gain) : base(sampleRate, frequncy, gain) { }
 

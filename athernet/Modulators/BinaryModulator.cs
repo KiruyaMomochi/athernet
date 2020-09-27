@@ -1,9 +1,9 @@
-﻿using athernet.SampleProviders;
+﻿using Athernet.SampleProviders;
 using System.Collections;
 
-namespace athernet.Modulators
+namespace Athernet.Modulators
 {
-    abstract class BinaryModulator: IModulator
+    public abstract class BinaryModulator: IModulator
     {
         protected SineGenerator SignalGenerator()
         {

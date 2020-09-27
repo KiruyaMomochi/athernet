@@ -1,9 +1,9 @@
-﻿using athernet.SampleProviders;
+﻿using Athernet.SampleProviders;
 using System.Collections;
 
-namespace athernet.Modulators
+namespace Athernet.Modulators
 {
-    abstract class DifferentialBinaryModulator : BinaryModulator
+    public abstract class DifferentialBinaryModulator : BinaryModulator
     {
         private int lastIdx = 0;
 

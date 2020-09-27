@@ -1,10 +1,10 @@
-﻿using athernet.SampleProviders;
+﻿using Athernet.SampleProviders;
 using System;
 using System.Collections;
 
-namespace athernet.Modulators
+namespace Athernet.Modulators
 {
-    class BinaryPSKModulator : BinaryModulator
+    public class BinaryPSKModulator : BinaryModulator
     {
         public BinaryPSKModulator(int sampleRate, double frequncy, double gain) :
             base(sampleRate,

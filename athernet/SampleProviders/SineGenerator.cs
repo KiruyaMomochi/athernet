@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace athernet.SampleProviders
+namespace Athernet.SampleProviders
 {
-    class SineGenerator : ISampleProvider
+    public class SineGenerator : ISampleProvider
     {
         private const double TwoPi = 2 * Math.PI;
         private int nSample;

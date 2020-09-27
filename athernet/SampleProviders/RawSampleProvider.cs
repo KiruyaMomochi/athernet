@@ -2,7 +2,7 @@
 using System.Linq;
 using NAudio.Wave;
 
-namespace athernet.SampleProviders
+namespace Athernet.SampleProviders
 {
     public class RawSampleProvider : ISampleProvider
     {

@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace athernet.Utils
+namespace Athernet.Utils
 {
     public static class Maths
     {
@@ -62,15 +62,15 @@ namespace athernet.Utils
         }
     }
 
-    static class Debug
+    public static class Debug
     {
-        internal static void writeTempCsv(float[] buffer, string fileName)
+        public static void writeTempCsv(float[] buffer, string fileName)
         {
             var path = Path.Combine(Path.GetTempPath(), fileName);
             File.WriteAllText(path, String.Join(", ", buffer));
         }
 
-        internal static void PrintResult(BitArray bits)
+        public static void PrintResult(BitArray bits)
         {
             foreach (var bit in bits)
             {

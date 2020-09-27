@@ -1,11 +1,11 @@
 ﻿using NAudio.Wave;
 using System;
 using System.Collections;
-using athernet.Modulators;
-using athernet.Preambles.PreambleBuilders;
+using Athernet.Modulators;
+using Athernet.Preambles.PreambleBuilders;
 using System.Threading;
 
-namespace athernet
+namespace AthernetCLI
 {
     class Program
     {
@@ -20,18 +20,19 @@ namespace athernet
                 bitArray.Set(i, true);
             }
 
-            var athernet = new Athernet()
+            var athernet = new Athernet.Athernet()
             {
                 Preamble = PreambleBuilder.Build(),
                 FrameBodyBits = 1000
             };
             athernet.DataAvailable += Athernet_DataAvailable;
             athernet.StartRecording();
+            Thread.Sleep(100000);
         }
 
         private static void Athernet_DataAvailable(object sender, BitArray e)
         {
-            Utils.Debug.PrintResult(e);
+            Athernet.Utils.Debug.PrintResult(e);
         }
 
         static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
