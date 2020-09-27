@@ -9,15 +9,18 @@ using System.Threading;
 
 namespace athernet.Preambles
 {
-    static class CrossCorrelationDetector
+    class CrossCorrelationDetector
     {
+        public int LocalMaximumThreshold { get; set; } = 15;
+        public int DetectFactor { get; set; } = 2;
+
         /// <summary>
         /// Detect the possiblity that preamble exists in <paramref name="samples"/>
         /// by cross-correlating
         /// </summary>
         /// <param name="samples">The samples to detect</param>
         /// <returns>The position of local maximum if the preamble is found, otherwise 0.</returns>
-        static public int? Detect(float[] samples, float[] template)
+        public int? Detect(float[] samples, float[] template)
         {
             int maxSize = Math.Max(samples.Length, template.Length);
             int fftSize = Utils.Maths.Power2RoundUp(maxSize);
@@ -39,13 +42,12 @@ namespace athernet.Preambles
                 }
             }
 
-            if (localMaximum > 25 && maxidx < samples.Length && maxidx >= template.Length)
+            if (localMaximum > LocalMaximumThreshold && maxidx < samples.Length && maxidx >= template.Length)
             {
                 var sum = samples.Skip(maxidx - template.Length).Take(template.Length).Aggregate(0f, (p, n) => p + n * n);
-                if (localMaximum > sum * 2)
+                if (localMaximum > sum * DetectFactor)
                 {
-                    //Utils.Debug.writeTempCsv(samples.Skip(maxidx - template.Length).Take(template.Length).ToArray(), "rua.csv");
-                    Console.WriteLine($"max index: {maxidx}. localMaximum: {localMaximum}. sum: {sum}");
+                    //Console.WriteLine($"max index: {maxidx}. localMaximum: {localMaximum}. sum: {sum}");
                     return maxidx;
                 }
             }
