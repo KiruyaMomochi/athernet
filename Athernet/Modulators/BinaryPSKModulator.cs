@@ -17,7 +17,7 @@ namespace Athernet.Modulators
             int packetLength = samples.Length;
             int bitLength = packetLength / BitDepth;
 
-            SineGenerator carrier = SignalGenerator();
+            SineGenerator carrier = NewSineSignal();
 
             BitArray frame = new BitArray(bitLength);
             int nSample = 0;

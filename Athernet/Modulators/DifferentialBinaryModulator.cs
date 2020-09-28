@@ -1,28 +1,31 @@
 ﻿using Athernet.SampleProviders;
+using System;
 using System.Collections;
 
 namespace Athernet.Modulators
 {
     public abstract class DifferentialBinaryModulator : BinaryModulator
     {
-        private int lastIdx = 0;
+        protected int lastIdx = 0;
 
-        protected override void One(SineGenerator signal)
+        protected override void One(SineGenerator carrier)
         {
             lastIdx ^= 1;
-            signal.Frequency = Frequency[lastIdx];
-            signal.Gain = Gain[lastIdx];
+            carrier.Frequency = Frequency[lastIdx];
+            carrier.Gain = Gain[lastIdx];
+            //Console.Write($"{lastIdx}");
         }
 
-        protected override void Zero(SineGenerator signal)
+        protected override void Zero(SineGenerator carrier)
         {
+            //Console.Write($"{lastIdx}");
             // Do nothing
         }
 
-        public DifferentialBinaryModulator(int sampleRate, double frequncy, double gain) :
+        public DifferentialBinaryModulator(int sampleRate, double[] frequncy, double[] gain) :
             base(sampleRate,
-                new double[] { frequncy, frequncy },
-                new double[] { gain, -gain })
+                frequncy,
+                gain)
         { }
 
         public override float[] Modulate(BitArray frame)
@@ -30,17 +33,22 @@ namespace Athernet.Modulators
             int packetLength = (frame.Length + 1) * BitDepth;
             float[] samples = new float[packetLength];
             int nSample = 0;
-            SineGenerator carrier = SignalGenerator();
+            SineGenerator modulateCarrier = NewSineSignal();
 
-            nSample += carrier.Read(samples, nSample, BitDepth);
+            lastIdx = 0;
+            modulateCarrier.Reset();
+
+            nSample += modulateCarrier.Read(samples, nSample, BitDepth);
             foreach (bool bit in frame)
             {
                 if (bit)
-                    One(carrier);
+                    One(modulateCarrier);
                 else
-                    Zero(carrier);
-                nSample += carrier.Read(samples, nSample, BitDepth);
+                    Zero(modulateCarrier);
+                nSample += modulateCarrier.Read(samples, nSample, BitDepth);
             }
+
+            //Console.WriteLine();
 
             return samples;
         }

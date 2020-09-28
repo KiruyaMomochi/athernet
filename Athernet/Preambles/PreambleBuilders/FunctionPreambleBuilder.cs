@@ -7,6 +7,9 @@ namespace Athernet.Preambles.PreambleBuilders
     public class FunctionPreambleBuilder
     {
         private readonly float[] preamble;
+        public int SampleRate { get; set; }
+        public float Time { get; set; }
+        public int SampleCount => (int)(SampleRate * Time);
 
         public FunctionPreambleBuilder(Func<float, float> buildFunction, int sampleRate, float time)
         {
@@ -40,11 +43,6 @@ namespace Athernet.Preambles.PreambleBuilders
                 preamble[i] = buildFunction(i, SampleRate, SampleCount);
             }
         }
-
-        public int SampleRate { get; set; }
-        public float Time { get; set; }
-
-        public int SampleCount => (int) (SampleRate * Time);
 
         public float[] Build()
         {

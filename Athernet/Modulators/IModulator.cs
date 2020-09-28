@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Athernet.Modulators
 {
-    interface IModulator
+    public interface IModulator
     {
         int BitDepth { get; set; }
         int SampleRate { get; set; }

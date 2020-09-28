@@ -7,11 +7,12 @@ namespace Athernet.SampleProviders
 {
     public class SineGenerator : ISampleProvider
     {
-        private const double TwoPi = 2 * Math.PI;
-        private int nSample;
+        public double Frequency { get; set; }
+        public double Gain { get; set; }
+        public double PhaseShift { get; set; }
+        public WaveFormat WaveFormat { get; }
 
         public SineGenerator() : this(48000, 1) { }
-
         public SineGenerator(int sampleRate, int channel)
         {
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channel);
@@ -22,10 +23,8 @@ namespace Athernet.SampleProviders
             PhaseShift = 0.0;
         }
 
-        public WaveFormat WaveFormat { get; }
-        public double Frequency { get; set; }
-        public double Gain { get; set; }
-        public double PhaseShift { get; set; }
+        private const double TwoPi = 2 * Math.PI;
+        private int nSample = 0;
 
         public int Read(float[] buffer, int offset, int count)
         {
@@ -48,6 +47,12 @@ namespace Athernet.SampleProviders
         public void Reset()
         {
             nSample = 0;
+        }
+
+        public void Reset(double phaseShift)
+        {
+            nSample = 0;
+            PhaseShift = phaseShift;
         }
     }
 }

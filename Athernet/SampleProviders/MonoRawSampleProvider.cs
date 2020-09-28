@@ -6,8 +6,6 @@ namespace Athernet.SampleProviders
 {
     public class MonoRawSampleProvider : ISampleProvider
     {
-        private readonly IEnumerator<float> sampleEnumerator;
-
         public WaveFormat WaveFormat { get; }
         public MonoRawSampleProvider(IEnumerable<float> data) : this(48000, data) { }
         public MonoRawSampleProvider(int sampleRate, IEnumerable<float> data)
@@ -29,5 +27,7 @@ namespace Athernet.SampleProviders
 
             return count;
         }
+
+        private readonly IEnumerator<float> sampleEnumerator;
     }
 }
