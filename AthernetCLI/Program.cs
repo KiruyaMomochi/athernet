@@ -18,9 +18,17 @@ namespace AthernetCLI
         static void Main(string[] args)
         {
             FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
-            var athernet = new Athernet.Athernet(48000, 30, PreambleBuilder.Build())
+
+            var athernet = new Athernet.Physical(PreambleBuilder.Build())
             {
-                FrameBodyBits = 2000
+                BitDepth = 32,
+                PlayChannel = Athernet.Physical.Channel.Right,
+                SampleRate = 48000,
+                FrameBodyBits = 2000,
+                Modulator = new DPSKModulator(48000, 8000, 1)
+                {
+                    BitDepth = 32
+                }
             };
 
             var file = File.ReadAllText("data.txt");
@@ -51,11 +59,12 @@ namespace AthernetCLI
             }
             else
             {
+                //athernet.Play(template);
                 Receive(athernet);
             }
         }
 
-        static void Receive(Athernet.Athernet athernet)
+        static void Receive(Athernet.Physical athernet)
         {
             BitArray bitArray = new BitArray(PacketLength);
             int wrong = 0;
@@ -67,6 +76,7 @@ namespace AthernetCLI
                 {
                     if (e[i] != template[idx])
                     {
+                        Console.WriteLine($"Wrong at {i}");
                         lcWrong++;
                     }
                     idx++;
