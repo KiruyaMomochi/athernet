@@ -13,30 +13,87 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Athernet
 {
+    /// <summary>
+    /// The physical layer of Athernet
+    /// </summary>
     public class Physical
     {
+        /// <summary>
+        /// The sample rate of acoustic signal
+        /// </summary>
+        /// <remarks>
+        /// For the best result, use the sample rate that is supported by device
+        /// </remarks>
         public int SampleRate { get; set; } = 48000;
+
+        /// <summary>
+        /// The number of bits used for a sample.
+        /// </summary>
         public int BitDepth { get; set; } = 32;
+
+        /// <summary>
+        /// The number of bits that each frame should transmit
+        /// </summary>
+        /// <remarks>
+        /// This may not equal to the number of bits in the packet
+        /// For example, when using differential modulators, there will be one more bit
+        /// </remarks>
         public int FrameBodyBits { get; set; } = 1000;
+
+        /// <summary>
+        /// The modulator that should be used for modulation and demodulation
+        /// </summary>
         public IModulator Modulator { get; set; }
+
+        /// <summary>
+        /// The channel to play acoustic signal
+        /// </summary>
         public Channel PlayChannel { get; set; } = Channel.Mono;
         
+        /// <summary>
+        /// The preamble to prepend before the frame body.
+        /// </summary>
         public float[] Preamble { get; set; }
+
+        /// <summary>
+        /// True if it is capturing signals.
+        /// </summary>
         public bool IsRecording = false;
+
+        /// <summary>
+        /// Indicates new data is available
+        /// </summary>
         public event EventHandler<BitArray> DataAvailable;
 
         private readonly WaveOutEvent wo = new WaveOutEvent();
         private float[] buffer = new float[0];
         private bool decoding = false;
         private int ReceivedFrameLength => (FrameBodyBits + 1) * BitDepth;
+        private WaveInEvent recorder;
 
+        /// <summary>
+        /// Channels that can be used to play signal
+        /// </summary>
         public enum Channel
         {
+            /// <summary>
+            /// Use single channel, or multiple channel at the same time
+            /// </summary>
             Mono,
+            /// <summary>
+            /// Use the left channel only
+            /// </summary>
             Left,
+            /// <summary>
+            /// Use the right channel only
+            /// </summary>
             Right
         }
 
+        /// <summary>
+        /// Create a Physical layer object
+        /// </summary>
+        /// <param name="preamble">The preamble to prepend before the frame body.</param>
         public Physical(float[] preamble)
         {
             Preamble = preamble;
@@ -46,6 +103,14 @@ namespace Athernet
             };
         }
 
+        /// <summary>
+        /// Play <paramref name="bitArray"/> using acoustic signals.
+        /// </summary>
+        /// <param name="bitArray"></param>
+        /// <remarks>
+        /// If the length of <paramref name="bitArray"/> not divisible by <c>DivideBitArray</c>,
+        /// plain signal will be appended to the end of the last package.
+        /// </remarks>
         public void Play(BitArray bitArray)
         {
             var splitBitArray = new TransformManyBlock<BitArray, BitArray>(DivideBitArray);
@@ -61,7 +126,9 @@ namespace Athernet
             playSamples.Completion.Wait();
         }
 
-        WaveInEvent recorder;
+        /// <summary>
+        /// Start recording for the new data
+        /// </summary>
         public void StartRecording()
         {
             if (IsRecording == true)
@@ -81,6 +148,9 @@ namespace Athernet
             IsRecording = true;
         }
 
+        /// <summary>
+        /// Stop recording for the new data
+        /// </summary>
         public void StopRecording()
         {
             recorder.StopRecording();
