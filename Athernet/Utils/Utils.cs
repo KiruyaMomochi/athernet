@@ -13,7 +13,7 @@ namespace Athernet.Utils
         /// Round up to next higher power of 2
         /// (return <paramref name="x"/> if already a power of 2)
         /// </summary>
-        /// <param name="x">The number to bu rounded</param>
+        /// <param name="x">The number to be rounded</param>
         /// <returns>The rounded number</returns>
         public static int Power2RoundUp(int x)
         {
