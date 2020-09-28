@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using NAudio.Wave;
+﻿using NAudio.Wave;
+using System.Collections.Generic;
 
 namespace Athernet.SampleProviders
 {

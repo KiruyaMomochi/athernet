@@ -1,5 +1,4 @@
 ﻿using Athernet.SampleProviders;
-using System;
 using System.Collections;
 
 namespace Athernet.Modulators
@@ -8,7 +7,7 @@ namespace Athernet.Modulators
     {
         public BinaryPSKModulator(int sampleRate, double frequncy, double gain) :
             base(sampleRate,
-                new double[] { frequncy, frequncy }, 
+                new double[] { frequncy, frequncy },
                 new double[] { gain, -gain })
         { }
 

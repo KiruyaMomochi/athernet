@@ -1,5 +1,4 @@
 ﻿using Athernet.SampleProviders;
-using System;
 using System.Collections;
 
 namespace Athernet.Modulators

@@ -2,7 +2,6 @@
 using NWaves.Signals;
 using System;
 using System.Collections;
-using System.Linq;
 
 namespace Athernet.Modulators
 {

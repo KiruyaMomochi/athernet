@@ -1,11 +1,7 @@
-﻿using Athernet.SampleProviders;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 using NWaves.Operations.Convolution;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
 
 namespace Athernet.Preambles.PreambleDetectors
 {

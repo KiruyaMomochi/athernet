@@ -5,9 +5,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 
@@ -49,7 +47,7 @@ namespace Athernet
         /// The channel to play acoustic signal
         /// </summary>
         public Channel PlayChannel { get; set; } = Channel.Mono;
-        
+
         /// <summary>
         /// The preamble to prepend before the frame body.
         /// </summary>
