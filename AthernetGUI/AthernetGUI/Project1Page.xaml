@@ -1,0 +1,251 @@
+﻿<Page
+    x:Class="AthernetGUI.Project1Page"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:AthernetGUI"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="15">
+        <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Task 1" />
+
+        <StackPanel Spacing="8">
+
+            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Checkpoint 1" />
+            <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                NODE1 is able to record the voice from TA (10 seconds) and then play the recorded signals.
+            </TextBlock>
+
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition MaxWidth="500" />
+                </Grid.ColumnDefinitions>
+                <StackPanel
+                    Grid.Row="2"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        x:Name="Task1RecordButton"
+                        Click="Task1RecordButton_Click"
+                        Content="Record"
+                        Style="{StaticResource AccentButtonStyle}" />
+                    <Button
+                        x:Name="Task1PlayButton"
+                        Click="Task1PlayButton_Click"
+                        Content="Play"
+                        IsEnabled="False" />
+                </StackPanel>
+
+                <TextBlock x:Name="Task1TextBlock" Grid.Row="0">
+                    <Run
+                        x:Name="Task1Status"
+                        Foreground="{StaticResource SystemAccentColor}"
+                        Text="Ready" />
+                    <Run x:Name="Task1Detail" />
+                </TextBlock>
+                <muxc:ProgressBar
+                    x:Name="Task1Progress"
+                    Grid.Row="1"
+                    IsEnabled="False"
+                    ShowPaused="False"
+                    Value="0" />
+            </Grid>
+
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Checkpoint 2" />
+            <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                NODE1 is able to play a predefined sound (any) and record the played sound at the same time.<LineBreak />
+                TA may say something during the recording. After 10 seconds, stop playing and recording.<LineBreak />
+                Then play the recorded sound for verification.</TextBlock>
+
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition MaxWidth="500" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="Task2TextBlock" Grid.Row="0">
+                    <Run
+                        x:Name="Task2Status"
+                        Foreground="{StaticResource SystemAccentColor}"
+                        Text="Please choose a file." />
+                    <Run x:Name="Task2Detail" />
+                </TextBlock>
+                <muxc:ProgressBar
+                    x:Name="Task2Progress"
+                    Grid.Row="1"
+                    IsEnabled="False"
+                    ShowPaused="False"
+                    Value="0" />
+
+                <StackPanel
+                    Grid.Row="2"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        Click="Task2PickButton_Click"
+                        Content="Pick..."
+                        Style="{StaticResource AccentButtonStyle}" />
+                    <Button
+                        x:Name="Task2RecordButton"
+                        Click="Task2RecordButton_Click"
+                        Content="Play and Record"
+                        IsEnabled="False" />
+                    <Button
+                        x:Name="Task2PlayButton"
+                        Click="Task2PlayButton_Click"
+                        Content="Play Recorded"
+                        IsEnabled="False" />
+                </StackPanel>
+
+            </Grid>
+        </StackPanel>
+
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Task 2" />
+            <StackPanel Spacing="8">
+                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Checkpoint 1" />
+                <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                    NODE1 is able to play signal: f(t) = sin (2pi 1000 t) + sin (2pi 10000 t).<LineBreak />
+                    TAs use spectrum analyzer to check the frequencies of the sound signal.</TextBlock>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Name="Task3PlayButton"
+                        Click="Task3PlayButton_Click"
+                        Content="Play"
+                        Style="{StaticResource AccentButtonStyle}" />
+                    <Button
+                        x:Name="Task3StopButton"
+                        Click="Task3StopButton_Click"
+                        Content="Stop"
+                        IsEnabled="False" />
+                    <muxc:ProgressRing x:Name="Task3ProgressRing" IsActive="False" />
+                    <TextBlock
+                        x:Name="Task3Status"
+                        VerticalAlignment="Center"
+                        Text="Ready" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Task 3" />
+            <StackPanel Spacing="8">
+                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Checkpoint 1" />
+                <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                    The TA provides a TXT file “INPUT.txt” which contains 10000 “0”s or “1”s.<LineBreak />
+                    NODE1 sends bits according to this file. NODE2 stores the received bits “OUTPUT.txt”.<LineBreak />
+                    During the transmission, TAs keep quiet.</TextBlock>
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Player" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Name="Task4PickButton"
+                        Click="Task4PickButton_Click"
+                        Content="Pick..."
+                        Style="{StaticResource AccentButtonStyle}" />
+                    <Button
+                        x:Name="Task4PlayButton"
+                        Click="Task4PlayButton_Click"
+                        Content="Play"
+                        IsEnabled="False" />
+                    <TextBlock x:Name="Task4TextBlock" VerticalAlignment="Center">
+                        <Run
+                            x:Name="Task4Status"
+                            Foreground="{StaticResource SystemAccentColor}"
+                            Text="Please choose a file." />
+                        <Run x:Name="Task4Detail" />
+                    </TextBlock>
+                </StackPanel>
+                <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="Recorder" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Name="Task4RecordButton"
+                        Click="Task4RecordButton_Click"
+                        Content="Record"
+                        Style="{StaticResource AccentButtonStyle}" />
+                    <!--<Button
+                        x:Name="Task4StopButton"
+                        Click="Task4StopButton_Click"
+                        Content="Stop"
+                        IsEnabled="False" />-->
+                    <TextBlock x:Name="Task4RecordTextBlock" VerticalAlignment="Center">
+                        <Run
+                            x:Name="Task4RecordStatus"
+                            Foreground="{StaticResource SystemAccentColor}"
+                            Text="Ready." />
+                        <Run x:Name="Task4RecordDetail" />
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Name="Task4SaveButton"
+                        Click="Task4SaveButton_Click"
+                        Content="Save..."
+                        IsEnabled="False" />
+                    <TextBlock x:Name="Task4SaveTextBlock" VerticalAlignment="Center">
+                        <Run
+                            x:Name="Task4SaveStatus"
+                            Foreground="{StaticResource SystemAccentColor}"
+                            Text="" />
+                        <Run x:Name="Task4SaveDetail" />
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Name="Task4CompareButton"
+                        Click="Task4CompareButton_Click"
+                        Content="Compare..." />
+                    <TextBlock x:Name="Task4CompareTextBlock" VerticalAlignment="Center">
+                        <Run x:Name="Task4CompareStatus" Foreground="{StaticResource SystemAccentColor}" />
+                        <Run x:Name="Task4CompareDetail" />
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+
+            <!--<StackPanel
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    x:Name="TestButton"
+                    Click="TestButton_Click"
+                    Content="Test..." />
+                <TextBlock x:Name="TestTextBlock" VerticalAlignment="Center">
+                    <Run x:Name="TestStatus" Text="" />
+                    <Run x:Name="TestDetail" />
+                </TextBlock>
+            </StackPanel>-->
+
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Task 4" />
+            <StackPanel Spacing="8">
+                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Checkpoint 1" />
+                <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                    The group provides two devices: NODE1 and NODE2 CK1(2 points).<LineBreak />
+                    The TA provides a TXT file “INPUT.txt” which contains 10000 “0”s or “1”s.<LineBreak />
+                    NODE1 sends bits according to this file.<LineBreak />
+                    NODE2 stores the received bits “OUTPUT.txt”.<LineBreak />
+                    During the transmission, TAs will clap their hands for four times.</TextBlock>
+                <Button
+                    Content="Play"
+                    IsEnabled="False"
+                    Style="{StaticResource AccentButtonStyle}" />
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
+</Page>

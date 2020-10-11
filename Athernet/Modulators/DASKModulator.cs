@@ -8,7 +8,7 @@ namespace Athernet.Modulators
     public class DASKModulator : DifferentialBinaryModulator
     {
         private readonly SineGenerator demodulateCarrier;
-        public DASKModulator(int sampleRate, double frequncy, double gain) :
+        public DASKModulator(in int sampleRate, in double frequncy, in double gain) :
             base(sampleRate, new[] { frequncy, frequncy }, new[] { gain, gain / 10 })
         {
             demodulateCarrier = NewSineSignal();
@@ -21,16 +21,16 @@ namespace Athernet.Modulators
 
             samples = ApplyFiltersBeforeMultiply(samples);
 
-            var (sum, phase) = FindPhase(samples);
+            var (_, phase) = FindPhase(samples);
             demodulateCarrier.Reset(phase);
             var sums = CalcSum(samples, frameLength);
 
             sums = ApplyFiltersAfterMultiply(sums);
 
-            return CalcFrame(sums, frameLength, sum);
+            return CalcFrame(sums, frameLength);
         }
 
-        private (float, float) FindPhase(float[] signal)
+        private (float, float) FindPhase(in float[] signal)
         {
             float maxSum = 0, maxPhase = 0;
             float[] carrierBuf = new float[BitDepth];
@@ -72,7 +72,7 @@ namespace Athernet.Modulators
             return sums;
         }
 
-        private BitArray CalcFrame(float[] sums, int frameLength, float sumZero)
+        private BitArray CalcFrame(float[] sums, int frameLength)
         {
             var thres = 1;
             BitArray frame = new BitArray(frameLength);

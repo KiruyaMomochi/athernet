@@ -7,7 +7,7 @@ namespace Athernet.Modulators
 {
     public class DPSKModulator : DifferentialBinaryModulator
     {
-        public DPSKModulator(int sampleRate, double frequncy, double gain) :
+        public DPSKModulator(in int sampleRate, in double frequncy, in double gain) :
             base(sampleRate, new[] { frequncy, frequncy }, new[] { gain, -gain })
         {
             demodulateCarrier = NewSineSignal();
@@ -30,7 +30,7 @@ namespace Athernet.Modulators
             return CalcFrame(sums, frameLength);
         }
 
-        private float FindPhase(float[] signal)
+        private float FindPhase(in float[] signal)
         {
             float maxSum = 0, maxPhase = 0;
             float[] carrierBuf = new float[BitDepth];
@@ -54,7 +54,7 @@ namespace Athernet.Modulators
             return maxPhase;
         }
 
-        private float[] CalcSum(float[] samples, int frameLength)
+        private float[] CalcSum(in float[] samples, int frameLength)
         {
             var sums = new float[samples.Length];
             float[] carrierBuf = new float[BitDepth];
@@ -72,7 +72,7 @@ namespace Athernet.Modulators
             return sums;
         }
 
-        private BitArray CalcFrame(float[] sums, int frameLength)
+        private BitArray CalcFrame(in float[] sums, int frameLength)
         {
             BitArray frame = new BitArray(frameLength);
             int nSample = 0;
@@ -99,14 +99,14 @@ namespace Athernet.Modulators
             return frame;
         }
 
-        protected float[] ApplyFiltersAfterMultiply(float[] samples)
+        protected float[] ApplyFiltersAfterMultiply(in float[] samples)
         {
             var onepole = new NWaves.Filters.OnePole.LowPassFilter(Frequency[0] * 1.5);
             var signal = new DiscreteSignal(SampleRate, samples);
             return onepole.ApplyTo(signal).Samples;
         }
 
-        protected float[] ApplyFiltersBeforeMultiply(float[] samples)
+        protected float[] ApplyFiltersBeforeMultiply(in float[] samples)
         {
             var cheb1 = new NWaves.Filters.ChebyshevI.HighPassFilter(Frequency[0], 1);
             var signal = new DiscreteSignal(SampleRate, samples);

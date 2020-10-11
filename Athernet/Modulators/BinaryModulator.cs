@@ -10,7 +10,7 @@ namespace Athernet.Modulators
         public int BitDepth { get; set; } = 44;
         public int SampleRate { get; set; }
 
-        public BinaryModulator(int sampleRate, double[] frequncy, double[] gain)
+        public BinaryModulator(in int sampleRate, in double[] frequncy, in double[] gain)
         {
             Frequency = frequncy;
             Gain = gain;
@@ -45,13 +45,13 @@ namespace Athernet.Modulators
                 Gain = Gain[0]
             };
 
-        protected virtual void One(SineGenerator carrier)
+        protected virtual void One(in SineGenerator carrier)
         {
             carrier.Frequency = Frequency[0];
             carrier.Gain = Gain[0];
         }
 
-        protected virtual void Zero(SineGenerator carrier)
+        protected virtual void Zero(in SineGenerator carrier)
         {
             carrier.Frequency = Frequency[1];
             carrier.Gain = Gain[1];

@@ -5,7 +5,7 @@ namespace Athernet.Modulators
 {
     public class BinaryPSKModulator : BinaryModulator
     {
-        public BinaryPSKModulator(int sampleRate, double frequncy, double gain) :
+        public BinaryPSKModulator(in int sampleRate, in double frequncy, in double gain) :
             base(sampleRate,
                 new double[] { frequncy, frequncy },
                 new double[] { gain, -gain })

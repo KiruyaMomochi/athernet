@@ -1,11 +1,27 @@
 ﻿using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
 namespace Athernet.Utils
 {
+    public static class General
+    {
+        public static BitArray FileToBits(string fileName)
+        {
+            var file = File.ReadAllText(fileName);
+            var arr = file.Split()[0].Select(x => x switch
+            {
+                '0' => false,
+                '1' => true,
+                _ => throw new NotImplementedException(),
+            });
+            return new BitArray(arr.ToArray());
+        }
+    }
+
     public static class Maths
     {
         // From https://graphics.stanford.edu/~seander/bithacks.html

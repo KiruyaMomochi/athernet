@@ -22,12 +22,12 @@ namespace Athernet
         /// <remarks>
         /// For the best result, use the sample rate that is supported by device
         /// </remarks>
-        public int SampleRate { get; set; } = 48000;
+        public int SampleRate { get => Modulator.SampleRate; }
 
         /// <summary>
         /// The number of bits used for a sample.
         /// </summary>
-        public int BitDepth { get; set; } = 32;
+        public int BitDepth { get => Modulator.BitDepth; }
 
         /// <summary>
         /// The number of bits that each frame should transmit
@@ -61,7 +61,12 @@ namespace Athernet
         /// <summary>
         /// Indicates new data is available
         /// </summary>
-        public event EventHandler<BitArray> DataAvailable;
+        public event EventHandler<DataAvailableEventArgs> DataAvailable;
+
+        /// <summary>
+        /// Indicates new data is available
+        /// </summary>
+        public event EventHandler PlayStopped;
 
         private readonly WaveOutEvent wo = new WaveOutEvent();
         private float[] buffer = new float[0];
@@ -92,12 +97,11 @@ namespace Athernet
         /// Create a Physical layer object
         /// </summary>
         /// <param name="preamble">The preamble to prepend before the frame body.</param>
-        public Physical(float[] preamble)
+        public Physical()
         {
-            Preamble = preamble;
-            Modulator = new DPSKModulator(SampleRate, 8000, 1)
+            Modulator = new DPSKModulator(48000, 8000, 1)
             {
-                BitDepth = BitDepth
+                BitDepth = 32
             };
         }
 
@@ -121,7 +125,8 @@ namespace Athernet
 
             splitBitArray.Post(bitArray);
             splitBitArray.Complete();
-            playSamples.Completion.Wait();
+            //playSamples.Completion.Wait();
+            playSamples.Completion.ContinueWith(tsk => OnPlayStopped(new EventArgs()));
         }
 
         /// <summary>
@@ -183,41 +188,49 @@ namespace Athernet
 
         private void PlaySamples(float[] samples)
         {
-            ISampleProvider provider = new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples));
-
-            if (PlayChannel == Channel.Left)
+            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            ISampleProvider provider = PlayChannel switch
             {
-                provider = new MonoToStereoSampleProvider(provider)
+                Channel.Mono => new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples)),
+                Channel.Left => new MonoToStereoSampleProvider(new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples)))
                 {
                     LeftVolume = 1.0f,
                     RightVolume = 0.0f
-                };
-            }
-            else if (PlayChannel == Channel.Right)
-            {
-                provider = new MonoToStereoSampleProvider(provider)
+                },
+                Channel.Right => new MonoToStereoSampleProvider(new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples)))
                 {
                     LeftVolume = 0.0f,
                     RightVolume = 1.0f
-                };
-            }
+                },
+                _ => throw new NotImplementedException(),
+            };
 
             // TODO: Async
             wo.Init(provider);
             wo.Play();
 
-            Thread.Sleep(samples.Length * 1000 / SampleRate + 100);
-            while (wo.PlaybackState == PlaybackState.Playing)
+            wo.PlaybackStopped += (s, a) =>
             {
-                Thread.Sleep(10);
-            }
-            wo.Dispose();
+                ewh.Set();
+            };
+            ewh.WaitOne();
         }
 
-        private void OnDataAvailable(BitArray obj)
+        protected virtual void OnPlayStopped(EventArgs e)
+        {
+            var handler = PlayStopped;
+            handler?.Invoke(this, e);
+        }
+
+        protected virtual void OnDataAvailable(BitArray data)
         {
             var handler = DataAvailable;
-            handler?.Invoke(this, obj);
+            handler?.Invoke(this, new DataAvailableEventArgs() { Data = data });
+        }
+
+        public class DataAvailableEventArgs : EventArgs
+        {
+            public BitArray Data { get; set; }
         }
 
         private void Recorder_DataAvailable(WaveInEventArgs e, TransformBlock<float[], BitArray> b, int bitsPerSample)
@@ -267,7 +280,7 @@ namespace Athernet
             return Modulator.Demodulate(samples);
         }
 
-        private float[] ToFloatBuffer(Byte[] buffer, int bytesRecorded, int bitsPerSample)
+        private float[] ToFloatBuffer(in Byte[] buffer, in int bytesRecorded, in int bitsPerSample)
         {
             var wave = new WaveBuffer(buffer);
 

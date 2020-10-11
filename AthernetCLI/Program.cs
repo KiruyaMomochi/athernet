@@ -17,13 +17,12 @@ namespace AthernetCLI
 
         static void Main(string[] args)
         {
-            FunctionPreambleBuilder PreambleBuilder = new FunctionPreambleBuilder(PreambleFunc, 48000, 0.1f);
+            WuPreambleBuilder PreambleBuilder = new WuPreambleBuilder(48000, 0.1f);
 
-            var athernet = new Athernet.Physical(PreambleBuilder.Build())
+            var athernet = new Athernet.Physical()
             {
-                BitDepth = 32,
+                Preamble = PreambleBuilder.Build(),
                 PlayChannel = Athernet.Physical.Channel.Right,
-                SampleRate = 48000,
                 FrameBodyBits = 2000,
                 Modulator = new DPSKModulator(48000, 8000, 1)
                 {
@@ -59,7 +58,7 @@ namespace AthernetCLI
             }
             else
             {
-                //athernet.Play(template);
+                athernet.Play(template);
                 Receive(athernet);
             }
         }
@@ -72,9 +71,9 @@ namespace AthernetCLI
             athernet.DataAvailable += (s, e) =>
             {
                 int lcWrong = 0;
-                for (int i = 0; i < e.Length && idx < PacketLength; i++)
+                for (int i = 0; i < e.Data.Length && idx < PacketLength; i++)
                 {
-                    if (e[i] != template[idx])
+                    if (e.Data[i] != template[idx])
                     {
                         Console.WriteLine($"Wrong at {i}");
                         lcWrong++;
@@ -96,30 +95,6 @@ namespace AthernetCLI
             while (athernet.IsRecording)
             {
                 Thread.Sleep(500);
-            }
-        }
-
-        static float PreambleFunc(int nSample, int sampleRate, int sampleCount)
-        {
-            float totalTime = (float)sampleCount / sampleRate;
-            float time = (float)nSample / sampleRate;
-            float frequencyMin = 4000;
-            float frequencyMax = 9000;
-
-            float a = (frequencyMax - frequencyMin) * 2 / totalTime;
-            float soundVoice = 1;
-
-            if (nSample < sampleCount / 2)
-            {
-                float phase = time * time * a * (float)Math.PI + time * frequencyMin * (float)Math.PI * 2;
-                float anss = (float)Math.Cos(phase) * soundVoice;
-                return anss;
-            }
-            else
-            {
-                float phase = -time * time * a * (float)Math.PI + time * frequencyMax * 2 * (float)Math.PI;
-                float anss = (float)Math.Cos(phase) * soundVoice;
-                return anss;
             }
         }
     }

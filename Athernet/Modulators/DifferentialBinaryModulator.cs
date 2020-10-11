@@ -7,7 +7,7 @@ namespace Athernet.Modulators
     {
         protected int lastIdx = 0;
 
-        protected override void One(SineGenerator carrier)
+        protected override void One(in SineGenerator carrier)
         {
             lastIdx ^= 1;
             carrier.Frequency = Frequency[lastIdx];
@@ -15,13 +15,13 @@ namespace Athernet.Modulators
             //Console.Write($"{lastIdx}");
         }
 
-        protected override void Zero(SineGenerator carrier)
+        protected override void Zero(in SineGenerator carrier)
         {
             //Console.Write($"{lastIdx}");
             // Do nothing
         }
 
-        public DifferentialBinaryModulator(int sampleRate, double[] frequncy, double[] gain) :
+        public DifferentialBinaryModulator(in int sampleRate, in double[] frequncy, in double[] gain) :
             base(sampleRate,
                 frequncy,
                 gain)
