@@ -65,6 +65,13 @@ namespace Athernet.Utils
                 yield return (b & b1) != 0;
         }
 
+        public static IEnumerable<byte> ToBytes(BitArray bitArray, Endianness endianness)
+        {
+            var bits = new bool[bitArray.Length];
+            bitArray.CopyTo(bits, 0);
+            return ToBytes(bits, endianness);
+        }
+
         public static IEnumerable<byte> ToBytes(IEnumerable<bool> bits, Endianness endianness)
         {
             var mask = endianness switch
