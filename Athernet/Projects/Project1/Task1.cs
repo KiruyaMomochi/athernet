@@ -21,7 +21,7 @@ namespace Athernet.Projects.Project1
             using var waveIn = new WaveInEvent()
             {
                 DeviceNumber = deviceNumber,
-                WaveFormat = new WaveFormat(48000, 2)
+                WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 1)
             };
             string tmpfile = Path.GetTempFileName();
             string file = tmpfile.Replace(".tmp", ".wav");
@@ -33,7 +33,7 @@ namespace Athernet.Projects.Project1
             {
                 writer.Write(a.Buffer, 0, a.BytesRecorded);
                 writer.Flush();
-                if (writer.TotalTime.TotalMilliseconds >= 10000)
+                if (writer.TotalTime.TotalMilliseconds >= seconds * 1000)
                 {
                     waveIn.StopRecording();
                 }
@@ -125,18 +125,20 @@ namespace Athernet.Projects.Project1
         public static void Play(string fileName)
         {
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            var athernet = new Athernet.Physical()
+            var modulator = new DpskModulator(48000, 8000, 1)
+            {
+                FrameBytes = 250,
+                BitDepth = 32
+            };
+            var athernet = new Physical.Physical(modulator)
             {
                 Preamble = new WuPreambleBuilder(48000, 0.1f).Build(),
-                PlayChannel = Athernet.Physical.Channel.Right,
-                FrameBodyBits = 2000,
-                Modulator = new DPSKModulator(48000, 8000, 1)
-                {
-                    BitDepth = 32
-                }
+                PlayChannel = Physical.Channel.Right
             };
 
-            var template = Athernet.Utils.General.FileToBits(fileName);
+            var bits = Athernet.Utils.General.FileToBits(fileName);
+            var template = new byte[bits.Count / 8];
+            bits.CopyTo(template, 0);
             athernet.Play(template);
 
             athernet.PlayStopped += (s, a) =>
@@ -149,15 +151,15 @@ namespace Athernet.Projects.Project1
         public static BitArray Receive(int maxLength)
         {
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            var athernet = new Athernet.Physical()
+            var modulator = new DpskModulator(48000, 8000, 1)
+            {
+                FrameBytes = 250,
+                BitDepth = 32
+            };
+            var athernet = new Physical.Physical(modulator)
             {
                 Preamble = new WuPreambleBuilder(48000, 0.1f).Build(),
-                PlayChannel = Athernet.Physical.Channel.Right,
-                FrameBodyBits = 2000,
-                Modulator = new DPSKModulator(48000, 8000, 1)
-                {
-                    BitDepth = 32
-                }
+                PlayChannel = Physical.Channel.Right
             };
 
             BitArray bitArray = new BitArray(maxLength);
@@ -167,9 +169,10 @@ namespace Athernet.Projects.Project1
             athernet.DataAvailable += (s, e) =>
             {
                 int lcWrong = 0;
+                BitArray data = new BitArray(e.Data);
                 for (int i = 0; i < e.Data.Length && idx < maxLength; i++)
                 {
-                    bitArray[idx] = e.Data[i];
+                    bitArray[idx] = data[i];
                     idx++;
                 }
                 wrong += lcWrong;
@@ -178,10 +181,10 @@ namespace Athernet.Projects.Project1
                 if (idx == maxLength)
                 {
                     ewh.Set();
-                    athernet.StopRecording();
+                    athernet.StopReceive();
                 }
             };
-            athernet.StartRecording();
+            athernet.StartReceive();
             ewh.WaitOne();
 
             return bitArray;
