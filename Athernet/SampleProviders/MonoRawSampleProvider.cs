@@ -10,23 +10,22 @@ namespace Athernet.SampleProviders
         public MonoRawSampleProvider(int sampleRate, IEnumerable<float> data)
         {
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
-            sampleEnumerator = data.GetEnumerator();
+            _sampleEnumerator = data.GetEnumerator();
         }
+
+        private readonly IEnumerator<float> _sampleEnumerator;
 
         public int Read(float[] buffer, int offset, int count)
         {
             for (int i = 0; i < count; i++)
             {
-                if (!sampleEnumerator.MoveNext())
-                {
+                if (_sampleEnumerator.MoveNext())
+                    buffer[offset + i] = _sampleEnumerator.Current;
+                else
                     return i;
-                }
-                buffer[offset + i] = sampleEnumerator.Current;
             }
 
             return count;
         }
-
-        private readonly IEnumerator<float> sampleEnumerator;
     }
 }
