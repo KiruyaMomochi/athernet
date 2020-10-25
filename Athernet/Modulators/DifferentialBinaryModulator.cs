@@ -1,44 +1,35 @@
-﻿using Athernet.SampleProviders;
-using System.Collections;
+﻿using System.Collections.Generic;
+using Athernet.SampleProviders;
+using Athernet.Utils;
 
 namespace Athernet.Modulators
 {
     public abstract class DifferentialBinaryModulator : BinaryModulator
     {
-        protected int lastIdx = 0;
+        protected int LastIdx = 0;
+        public override int FrameSamples => (FrameBits + 1) * BitDepth;
 
         protected override void One(in SineGenerator carrier)
         {
-            lastIdx ^= 1;
-            carrier.Frequency = Frequency[lastIdx];
-            carrier.Gain = Gain[lastIdx];
-            //Console.Write($"{lastIdx}");
+            LastIdx ^= 1;
+            carrier.Frequency = Frequency[LastIdx];
+            carrier.Gain = Gain[LastIdx];
         }
 
         protected override void Zero(in SineGenerator carrier)
         {
-            //Console.Write($"{lastIdx}");
             // Do nothing
         }
 
-        public DifferentialBinaryModulator(in int sampleRate, in double[] frequncy, in double[] gain) :
-            base(sampleRate,
-                frequncy,
-                gain)
-        { }
-
-        public override float[] Modulate(BitArray frame)
+        public new float[] Modulate(IEnumerable<byte> bytes)
         {
-            int packetLength = (frame.Length + 1) * BitDepth;
-            float[] samples = new float[packetLength];
-            int nSample = 0;
-            SineGenerator modulateCarrier = NewSineSignal();
-
-            lastIdx = 0;
-            modulateCarrier.Reset();
+            LastIdx = 0;
+            var samples = new float[FrameSamples];
+            var nSample = 0;
+            var modulateCarrier = NewSineSignal();
 
             nSample += modulateCarrier.Read(samples, nSample, BitDepth);
-            foreach (bool bit in frame)
+            foreach (bool bit in Utils.Maths.ToBits(bytes, Maths.Endianness.LittleEndian))
             {
                 if (bit)
                     One(modulateCarrier);
@@ -46,8 +37,6 @@ namespace Athernet.Modulators
                     Zero(modulateCarrier);
                 nSample += modulateCarrier.Read(samples, nSample, BitDepth);
             }
-
-            //Console.WriteLine();
 
             return samples;
         }

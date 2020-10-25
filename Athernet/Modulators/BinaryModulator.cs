@@ -1,30 +1,27 @@
-﻿using Athernet.SampleProviders;
-using System.Collections;
+﻿using System.Collections.Generic;
+using Athernet.SampleProviders;
+using Athernet.Utils;
 
 namespace Athernet.Modulators
 {
     public abstract class BinaryModulator : IModulator
     {
-        public double[] Frequency { get; set; }
-        public double[] Gain { get; set; }
-        public int BitDepth { get; set; } = 44;
-        public int SampleRate { get; set; }
+        public virtual double[] Frequency { get; protected set; }
+        public virtual double[] Gain { get; protected set; }
+        public virtual int BitDepth { get; set; } = 44;
+        public virtual int SampleRate { get; set; }
+        public virtual int FrameBytes { get; set; }
 
-        public BinaryModulator(in int sampleRate, in double[] frequncy, in double[] gain)
+        public virtual int FrameBits => FrameBytes * 8;
+        public virtual int FrameSamples => FrameBits * BitDepth;
+
+        public float[] Modulate(IEnumerable<byte> bytes)
         {
-            Frequency = frequncy;
-            Gain = gain;
-            SampleRate = sampleRate;
-        }
+            var samples = new float[FrameSamples];
+            var nSample = 0;
+            var modulateCarrier = NewSineSignal();
 
-        public virtual float[] Modulate(BitArray frame)
-        {
-            int packetLength = frame.Length * BitDepth;
-            float[] samples = new float[packetLength];
-            int nSample = 0;
-            SineGenerator modulateCarrier = NewSineSignal();
-
-            foreach (bool bit in frame)
+            foreach (bool bit in Utils.Maths.ToBits(bytes, Maths.Endianness.LittleEndian))
             {
                 if (bit)
                     One(modulateCarrier);
@@ -36,7 +33,7 @@ namespace Athernet.Modulators
             return samples;
         }
 
-        public abstract BitArray Demodulate(float[] frame);
+        public abstract byte[] Demodulate(float[] frame);
 
         protected virtual SineGenerator NewSineSignal()
             => new SineGenerator(SampleRate, 1)

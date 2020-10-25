@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System.Collections.Generic;
 
 namespace Athernet.Modulators
 {
@@ -6,8 +6,13 @@ namespace Athernet.Modulators
     {
         int BitDepth { get; set; }
         int SampleRate { get; set; }
+        int FrameBytes { get; set; }
+        int FrameSamples { get; }
 
-        float[] Modulate(BitArray frame);
-        BitArray Demodulate(float[] samples);
+        int FrameBits => FrameBytes * 8;
+
+        float[] Modulate(IEnumerable<byte> bytes);
+
+        byte[] Demodulate(float[] samples);
     }
 }
