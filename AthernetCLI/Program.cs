@@ -6,6 +6,8 @@ using Athernet.Preambles.PreambleBuilders;
 using System.Threading;
 using System.IO;
 using System.Linq;
+using Athernet.Physical;
+using Athernet.Projects.Project1;
 
 namespace AthernetCLI
 {
@@ -13,21 +15,22 @@ namespace AthernetCLI
     {
         static int PacketLength;
 
-        static BitArray template;
+        static byte[] template;
 
         static void Main(string[] args)
         {
             WuPreambleBuilder PreambleBuilder = new WuPreambleBuilder(48000, 0.1f);
 
-            var athernet = new Athernet.Physical()
+            var modulator = new DpskModulator(48000, 8000, 1)
+            {
+                FrameBytes = 2000,
+                BitDepth = 32
+            };
+
+            var athernet = new Physical(modulator)
             {
                 Preamble = PreambleBuilder.Build(),
-                PlayChannel = Athernet.Physical.Channel.Right,
-                FrameBodyBits = 2000,
-                Modulator = new DPSKModulator(48000, 8000, 1)
-                {
-                    BitDepth = 32
-                }
+                PlayChannel = Channel.Right
             };
 
             var file = File.ReadAllText("data.txt");
@@ -37,7 +40,7 @@ namespace AthernetCLI
                 '1' => true,
                 _ => throw new NotImplementedException(),
             });
-            template = new BitArray(arr.ToArray());
+            template = Athernet.Utils.Maths.ToBytes(new BitArray(arr.ToArray()), Athernet.Utils.Maths.Endianness.LittleEndian).ToArray();
 
             PacketLength = template.Length;
 
@@ -59,11 +62,11 @@ namespace AthernetCLI
             else
             {
                 athernet.Play(template);
-                Receive(athernet);
             }
+            Thread.Sleep(TimeSpan.FromSeconds(10));
         }
 
-        static void Receive(Athernet.Physical athernet)
+        static void Receive(Physical athernet)
         {
             BitArray bitArray = new BitArray(PacketLength);
             int wrong = 0;
@@ -85,12 +88,12 @@ namespace AthernetCLI
 
                 if (idx == PacketLength)
                 {
-                    athernet.StopRecording();
+                    athernet.StopReceive();
                     Console.WriteLine("Stopped.");
                     Console.WriteLine(wrong);
                 }
             };
-            athernet.StartRecording();
+            athernet.StartReceive();
             Console.WriteLine("Recording.");
             while (athernet.IsRecording)
             {
