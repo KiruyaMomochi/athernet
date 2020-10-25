@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using NAudio.Wave;
 
 namespace Athernet.Utils
 {
@@ -47,11 +50,60 @@ namespace Athernet.Utils
             x |= x >> 16;
             return x + 1;
         }
+
+        public static IEnumerable<bool> ToBits(IEnumerable<byte> bytes, Endianness endianness)
+        {
+            var mask = endianness switch
+            {
+                Endianness.LittleEndian => LittleByteMask,
+                Endianness.BigEndian => BigByteMask,
+                _ => throw new NotImplementedException()
+            };
+
+            foreach (var b in bytes)
+            foreach (var b1 in mask)
+                yield return (b & b1) != 0;
+        }
+
+        public static IEnumerable<byte> ToBytes(IEnumerable<bool> bits, Endianness endianness)
+        {
+            var mask = endianness switch
+            {
+                Endianness.LittleEndian => LittleByteMask,
+                Endianness.BigEndian => BigByteMask,
+                _ => throw new NotImplementedException()
+            };
+
+            byte b = 0;
+            var idx = 0;
+
+            foreach (var bit in bits)
+            {
+                if (bit)
+                    b |= mask[idx];
+                idx++;
+                if (idx != 8)
+                    continue;
+
+                yield return b;
+                b = 0;
+                idx = 0;
+            }
+        }
+
+        public enum Endianness
+        {
+            LittleEndian,
+            BigEndian
+        }
+
+        public static readonly byte[] LittleByteMask = {1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7};
+        public static readonly byte[] BigByteMask = {1 << 7, 1 << 6, 1 << 5, 1 << 4, 1 << 3, 1 << 2, 1 << 1, 1 << 0};
     }
 
     public static class Network
     {
-        static void ICMPListener()
+        public static void ICMPListener()
         {
             var icmpListener = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.Icmp);
             icmpListener.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 5000);
@@ -76,9 +128,26 @@ namespace Athernet.Utils
         }
     }
 
+    public static class Audio
+    {
+        public static IEnumerable<float> ToFloatBuffer(in byte[] buffer, in int bytesRecorded, in int bitsPerSample)
+        {
+            var wave = new WaveBuffer(buffer);
+
+            var floatBuffer = bitsPerSample switch
+            {
+                16 => wave.ShortBuffer.Take(bytesRecorded / 2).Select(x => (float) x),
+                32 => wave.FloatBuffer.Take(bytesRecorded / 4),
+                _ => throw new NotImplementedException(),
+            };
+
+            return floatBuffer;
+        }
+    }
+
     public static class Debug
     {
-        public static void writeTempCsv(float[] buffer, string fileName)
+        public static void WriteTempCsv(float[] buffer, string fileName)
         {
             var path = Path.Combine(Path.GetTempPath(), fileName);
             File.WriteAllText(path, String.Join(", ", buffer));
@@ -95,7 +164,20 @@ namespace Athernet.Utils
                     _ => throw new NotImplementedException()
                 } + " ");
             }
+
             Console.WriteLine();
+        }
+
+        public static void PlaySamples(IEnumerable<float> samples)
+        {
+            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+
+            var w = new WaveOutEvent();
+            w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
+            w.Play();
+
+            w.PlaybackStopped += (sender, args) => ewh.Set();
+            ewh.WaitOne();
         }
     }
 }
