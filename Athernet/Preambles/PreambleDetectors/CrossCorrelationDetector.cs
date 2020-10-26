@@ -11,12 +11,11 @@ namespace Athernet.Preambles.PreambleDetectors
     public class CrossCorrelationDetector
     {
         public readonly int WindowSize = 200;
+        public readonly float[] Preamble;
 
-        public float[] Preamble { get; private set; }
-        
         private int FftSize => Utils.Maths.Power2RoundUp(Preamble.Length + WindowSize);
 
-        private float[] _samples;
+        private readonly float[] _samples;
         private readonly Convolver _convolver;
 
         private readonly float[] _kernel;
