@@ -13,91 +13,64 @@ namespace AthernetCLI
 {
     class Program
     {
-        static int PacketLength;
-
-        static byte[] template;
-
         static void Main(string[] args)
         {
-            WuPreambleBuilder PreambleBuilder = new WuPreambleBuilder(48000, 0.1f);
+            // using USpeakers 2
+            // var speaker = new Guid("50437f1f-ec8f-48ab-934c-c5beb21b0fe0");
+            // var outDevice = new DirectSoundOut(speaker);
 
-            var modulator = new DpskModulator(48000, 8000, 1)
+            var modulator = new DpskModulator(48000, 8000)
             {
-                FrameBytes = 2000,
-                BitDepth = 32
+                BitDepth = 36,
+                FrameBytes = 100
+            };
+            var preamble = new WuPreambleBuilder(48000, 0.05f).Build();
+            var physical = new Physical(modulator)
+            {
+                Preamble = preamble,
+                PlayChannel = Channel.Mono
             };
 
-            var athernet = new Physical(modulator)
+            byte[] template = new byte[modulator.FrameBytes];
+            byte[] result = null;
+            
+            for (int i = 0; i < template.Length; i++)
             {
-                Preamble = PreambleBuilder.Build(),
-                PlayChannel = Channel.Right
+                template[i] = (byte) i;
+            }
+
+            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            
+            physical.StartReceive();
+            physical.Play(template);
+            
+            physical.PacketDetected += (sender, eventArgs)
+                => Console.WriteLine("New packet detected.");
+            physical.DataAvailable += (sender, eventArgs) =>
+            {
+                result = eventArgs.Data;
+                ewh.Set();
             };
+            
+            ewh.WaitOne();
+            physical.StopReceive();
 
-            var file = File.ReadAllText("data.txt");
-            var arr = file.Split()[0].Select(x => x switch
+            if (result != null)
             {
-                '0' => false,
-                '1' => true,
-                _ => throw new NotImplementedException(),
-            });
-            template = Athernet.Utils.Maths.ToBytes(new BitArray(arr.ToArray()), Athernet.Utils.Maths.Endianness.LittleEndian).ToArray();
-
-            PacketLength = template.Length;
-
-            if (args.Length > 0)
-            {
-                switch (args[0])
-                {
-                    case "play":
-                        athernet.Play(template);
-                        break;
-                    case "record":
-                        Receive(athernet);
-                        break;
-                    default:
-                        Console.WriteLine("?");
-                        break;
-                };
+                var wrong = result.Select((t, i) => (t != template[i] ? 1 : 0)).Sum();
+                Console.WriteLine($"Wrong num: {wrong}");
             }
             else
             {
-                athernet.Play(template);
+                Console.WriteLine("No data.");
             }
-            Thread.Sleep(TimeSpan.FromSeconds(10));
         }
 
-        static void Receive(Physical athernet)
+        static void ListOutputDevice()
         {
-            BitArray bitArray = new BitArray(PacketLength);
-            int wrong = 0;
-            int idx = 0;
-            athernet.DataAvailable += (s, e) =>
+            foreach (var device in DirectSoundOut.Devices)
             {
-                int lcWrong = 0;
-                for (int i = 0; i < e.Data.Length && idx < PacketLength; i++)
-                {
-                    if (e.Data[i] != template[idx])
-                    {
-                        Console.WriteLine($"Wrong at {i}");
-                        lcWrong++;
-                    }
-                    idx++;
-                }
-                wrong += lcWrong;
-                Console.WriteLine(lcWrong);
-
-                if (idx == PacketLength)
-                {
-                    athernet.StopReceive();
-                    Console.WriteLine("Stopped.");
-                    Console.WriteLine(wrong);
-                }
-            };
-            athernet.StartReceive();
-            Console.WriteLine("Recording.");
-            while (athernet.IsRecording)
-            {
-                Thread.Sleep(500);
+                Console.WriteLine($"{device.Description} {device.Guid}");
             }
         }
     }
