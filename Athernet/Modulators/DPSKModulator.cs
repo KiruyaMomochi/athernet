@@ -40,7 +40,7 @@ namespace Athernet.Modulators
             float maxSum = 0, maxPhase = 0;
             float[] carrierBuf = new float[BitDepth];
 
-            for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.1f)
+            for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.05f)
             {
                 carrier.Reset(i);
                 carrier.Read(carrierBuf, 0, BitDepth);
