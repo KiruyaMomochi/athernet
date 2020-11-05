@@ -16,7 +16,7 @@ namespace AthernetCLI
         private static void Main(string[] args)
         {
             // ListOutputDevice();
-            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             
             ListUsingDevice();
             // int cnt = 0;
@@ -89,7 +89,7 @@ namespace AthernetCLI
             ewh.WaitOne();
         }
 
-        private static bool PlayReceive()
+        private static int PlayReceive()
         {
             var modulator = new DpskModulator(48000, 8000)
             {
@@ -107,6 +107,8 @@ namespace AthernetCLI
 
             byte[] template = new byte[(int) (physical.PayloadBytes)];
             byte[] result = new byte[0];
+
+            int wrongcnt = 0;
 
             for (int i = 0; i < template.Length; i++)
             {
@@ -144,6 +146,11 @@ namespace AthernetCLI
                     Console.Write($"{t} ");
                 }
 
+                if (ints.Length != 0)
+                {
+                    wrongcnt++;
+                }
+
                 Console.WriteLine();
 
                 if (irecv == 42)
@@ -155,7 +162,7 @@ namespace AthernetCLI
             ewh.WaitOne();
             physical.StopReceive();
 
-            return false;
+            return wrongcnt;
         }
 
         static void ListOutputDevice()

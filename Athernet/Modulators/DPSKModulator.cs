@@ -119,20 +119,20 @@ namespace Athernet.Modulators
                     nSample++;
                 }
 
-                if (debounce >= 100)
+                if (debounce >= 10)
                 {
                     var (a0, am, ap) = (Math.Abs(sum), Math.Abs(summ), Math.Abs(sump));
                     
                     if (ap > a0)
                     {
-                        Console.WriteLine($"Jump! from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.");
+                        Console.WriteLine($"Jump! from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
                         sum = sump;
                         offset++;
                         debounce = 0;
                     }
-                    else if (am > a0)
+                    else if (am > a0 && offset >= -1)
                     {
-                        Console.WriteLine($"Back! from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.");
+                        Console.WriteLine($"Back! from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
                         sum = summ;
                         offset--;
                         debounce = 0;
