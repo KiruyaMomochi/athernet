@@ -50,6 +50,12 @@ namespace Athernet.Physical
             set => _receiver.Modulator = _transmitter.Modulator = value;
         }
 
+        public int PayloadBytes
+        {
+            get => _receiver.PayloadBytes;
+            set => _receiver.PayloadBytes = value;
+        }
+
         /// <summary>
         /// The sample rate of acoustic signal
         /// </summary>
@@ -85,7 +91,14 @@ namespace Athernet.Physical
             _receiver = new Receiver(modulator);
         }
 
-        public void Play(byte[] bytes) => _transmitter.Play(bytes);
+        public void Play(byte[] bytes)
+        {
+            if (bytes.Length != PayloadBytes)
+            {
+                throw new System.IO.InvalidDataException($"bytes have length of {bytes.Length}, should be {PayloadBytes}");
+            }
+            _transmitter.Play(bytes);
+        }
 
         public void StartReceive() => _receiver.StartReceive();
 

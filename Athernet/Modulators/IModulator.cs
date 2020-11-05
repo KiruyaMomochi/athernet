@@ -6,13 +6,11 @@ namespace Athernet.Modulators
     {
         int BitDepth { get; set; }
         int SampleRate { get; set; }
-        int FrameBytes { get; set; }
-        int FrameSamples { get; }
 
-        int FrameBits => FrameBytes * 8;
+        public int FrameSamples(int frameBytes);
+        
+        float[] Modulate(byte[] bytes);
 
-        float[] Modulate(IEnumerable<byte> bytes);
-
-        byte[] Demodulate(float[] samples);
+        byte[] Demodulate(float[] samples, int frameBytes);
     }
 }

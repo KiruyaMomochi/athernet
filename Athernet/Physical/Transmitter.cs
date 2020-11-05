@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using Athernet.Modulators;
 using Athernet.SampleProviders;
+using Force.Crc32;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -27,40 +29,62 @@ namespace Athernet.Physical
         public Transmitter(IModulator modulator)
         {
             Modulator = modulator;
+            Init();
+        }
+        
+        private TransformBlock<IEnumerable<byte>, byte[]> _addCrc;
+        private TransformBlock<byte[], float[]> _modulateArray;
+        private ActionBlock<float[]> _playSamples;
+
+        private void Init()
+        {
+            _addCrc = new TransformBlock<IEnumerable<byte>, byte[]>(AddCrc);
+            _modulateArray = new TransformBlock<byte[], float[]>(s => Modulator.Modulate(s));
+            _playSamples = new ActionBlock<float[]>(PlaySamples);
+            var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
+            _addCrc.LinkTo(_modulateArray, linkOptions);
+            _modulateArray.LinkTo(_playSamples, linkOptions);
+            _playSamples.Completion.ContinueWith(tsk => OnPlayStopped(EventArgs.Empty));
+        }
+        
+        public void Play(IEnumerable<byte> bytes)
+        {
+            State = TransmitState.Transmitting;
+            
+            _addCrc.Post(bytes);
         }
 
-        public void Play(byte[] bytes)
+        public void Stop()
         {
-            if (State == TransmitState.Transmitting)
+            if (State == TransmitState.Idle)
             {
                 return;
             }
-
-            State = TransmitState.Transmitting;
-
-            var splitBitArray = new TransformManyBlock<byte[], IEnumerable<byte>>(DivideBytes);
-            var modulateArray = new TransformBlock<IEnumerable<byte>, float[]>(s => Modulator.Modulate(s));
-            var playSamples = new ActionBlock<float[]>(PlaySamples);
-
-            var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
-            splitBitArray.LinkTo(modulateArray, linkOptions);
-            modulateArray.LinkTo(playSamples, linkOptions);
-
-            splitBitArray.Post(bytes);
-            splitBitArray.Complete();
-            playSamples.Completion.ContinueWith(tsk => OnPlayStopped(EventArgs.Empty));
+            
+            _addCrc.Complete();
         }
 
-        private IEnumerable<IEnumerable<byte>> DivideBytes(byte[] source)
+        private byte[] AddCrc(IEnumerable<byte> arg)
         {
-            for (var i = 0; i < source.Length; i += Modulator.FrameBytes)
-            {
-                yield return source.Skip(i);
-            }
+            Trace.WriteLine("P1. Adding CRC to the incoming payload.");
+            var arr = arg.Concat(new byte[4]).ToArray();
+            Crc32Algorithm.ComputeAndWriteToEnd(arr);
+            return arr;
         }
+
+        // private IEnumerable<IEnumerable<byte>> DivideBytes(byte[] source)
+        // {
+        //     for (var i = 0; i < source.Length; i += Modulator.FrameBytes)
+        //     {
+        //         yield return source.Skip(i).Take(Modulator.FrameBytes).ToArray();
+        //     }
+        // }
 
         private void PlaySamples(float[] samples)
         {
+            Trace.WriteLine($"P3. Playing samples.");
+            
+            Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
             ISampleProvider provider = new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples));
 
@@ -89,6 +113,7 @@ namespace Athernet.Physical
 
             wo.PlaybackStopped += (s, a) => { ewh.Set(); };
             ewh.WaitOne();
+            Trace.WriteLine($"P4. Finished playing.");
         }
 
         private void OnPlayStopped(EventArgs e)

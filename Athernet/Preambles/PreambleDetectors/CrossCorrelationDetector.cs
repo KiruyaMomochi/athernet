@@ -37,7 +37,7 @@ namespace Athernet.Preambles.PreambleDetectors
             _output = new float[FftSize * 2];
         }
 
-        public int CrossCorrelate()
+        private int CrossCorrelate()
         {
             // Do the cross correlation.
             Preamble.FastCopyTo(_kernel, Preamble.Length);
@@ -73,6 +73,10 @@ namespace Athernet.Preambles.PreambleDetectors
             }
 
             // Athernet.Utils.Debug.PlaySamples(_samples.Take(maxIndex).TakeLast(Preamble.Length));
+            if (maxIndex != -1)
+            {
+                Athernet.Utils.Debug.WriteTempWav(_samples.Take(maxIndex).TakeLast(Preamble.Length).ToArray(), "recv_preamble.wav");
+            }
             return maxIndex;
         }
 

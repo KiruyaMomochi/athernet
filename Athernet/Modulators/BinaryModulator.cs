@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Athernet.SampleProviders;
 using Athernet.Utils;
 
@@ -10,14 +12,12 @@ namespace Athernet.Modulators
         public virtual double[] Gain { get; protected set; }
         public virtual int BitDepth { get; set; } = 44;
         public virtual int SampleRate { get; set; }
-        public virtual int FrameBytes { get; set; }
 
-        public virtual int FrameBits => FrameBytes * 8;
-        public virtual int FrameSamples => FrameBits * BitDepth;
+        public virtual int FrameSamples (int frameBytes) => frameBytes * 8 * BitDepth;
 
-        public float[] Modulate(IEnumerable<byte> bytes)
+        public virtual float[] Modulate(byte[] bytes)
         {
-            var samples = new float[FrameSamples];
+            var samples = new float[FrameSamples(bytes.Length)];
             var nSample = 0;
             var modulateCarrier = NewSineSignal();
 
@@ -30,10 +30,11 @@ namespace Athernet.Modulators
                 nSample += modulateCarrier.Read(samples, nSample, BitDepth);
             }
 
+            // Athernet.Utils.Debug.PlaySamples(samples, Guid.Parse("617edf03-aaa7-4b5f-a862-1ab9fc8cc617"));
             return samples;
         }
 
-        public abstract byte[] Demodulate(float[] frame);
+        public abstract byte[] Demodulate(float[] frame, int frameBytes);
 
         protected virtual SineGenerator NewSineSignal()
             => new SineGenerator(SampleRate, 1)

@@ -2,6 +2,7 @@
 using NWaves.Signals;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Athernet.Modulators
 {
@@ -17,22 +18,26 @@ namespace Athernet.Modulators
             Gain = new[] {gain, -gain};
         }
 
-        public override byte[] Demodulate(float[] samples)
+        public override byte[] Demodulate(float[] samples, int frameBytes)
         {
+            Trace.WriteLine($"R3. Demodulate using {this.GetType().Name}.");
+            
             // Athernet.Utils.Debug.PlaySamples(samples);
             var demodulateCarrier = NewSineSignal();
-            var packetLength = samples.Length;
-            var frameBits = packetLength / BitDepth - 1;
+            var frameBits = frameBytes * 8;
+            
+            demodulateCarrier.Reset(FindPhase(samples, demodulateCarrier));
 
             samples = ApplyFiltersBeforeMultiply(samples);
-
-            demodulateCarrier.Reset(FindPhase(samples, demodulateCarrier));
             // demodulateCarrier.Reset();
-            var sums = CalcSum(samples, frameBits, demodulateCarrier);
+            // var sums = CalcSum(samples, frameBits, demodulateCarrier);
 
-            sums = ApplyFiltersAfterMultiply(sums);
+            // sums = ApplyFiltersAfterMultiply(sums);
 
-            return CalcFrame(sums);
+            var carrierSamples = new float[samples.Length];
+            demodulateCarrier.Read(carrierSamples, 0, carrierSamples.Length);
+
+            return CalcFrame(samples, carrierSamples, frameBytes);
         }
 
         private float FindPhase(in float[] signal, SineGenerator carrier)
@@ -40,7 +45,7 @@ namespace Athernet.Modulators
             float maxSum = 0, maxPhase = 0;
             float[] carrierBuf = new float[BitDepth];
 
-            for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.05f)
+            for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.1f)
             {
                 carrier.Reset(i);
                 carrier.Read(carrierBuf, 0, BitDepth);
@@ -61,7 +66,7 @@ namespace Athernet.Modulators
 
         private float[] CalcSum(in float[] samples, int frameLength, SineGenerator carrier)
         {
-            var sums = new float[samples.Length];
+            var sums = new float[frameLength * BitDepth];
             float[] carrierBuf = new float[BitDepth];
             int nSample = 0;
 
@@ -78,9 +83,84 @@ namespace Athernet.Modulators
             return sums;
         }
 
-        private byte[] CalcFrame(in IEnumerable<float> sums)
+        private byte[] CalcFrame(float[] samples, float[] carrier, int frameBytes)
         {
-            var bytes = new byte[FrameBytes];
+            var bytes = new byte[frameBytes];
+            var nByte = 0;
+            var nBit = 0;
+            var nSample = 0;
+            var lastData = false;
+            var offset = 1;
+
+            var debounce = 0;
+
+            GetNextBit();
+
+            for (var i = 0; i < frameBytes; i++)
+            {
+                for (var j = 0; j < 8; j++)
+                {
+                    PushNextBit(GetNextBit());
+                }
+            }
+
+            return bytes;
+
+            bool GetNextBit()
+            {
+                debounce++;
+                
+                float sum = 0, sump = 0, summ = 0;
+                for (var k = 0; k < BitDepth; k++)
+                {
+                    sum += samples[offset + nSample] * carrier[nSample];
+                    summ += samples[offset + nSample - 1] * carrier[nSample];
+                    sump += samples[offset + nSample + 1] * carrier[nSample];
+                    nSample++;
+                }
+
+                if (debounce >= 100)
+                {
+                    var (a0, am, ap) = (Math.Abs(sum), Math.Abs(summ), Math.Abs(sump));
+                    
+                    if (ap > a0)
+                    {
+                        Console.WriteLine($"Jump! from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.");
+                        sum = sump;
+                        offset++;
+                        debounce = 0;
+                    }
+                    else if (am > a0)
+                    {
+                        Console.WriteLine($"Back! from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.");
+                        sum = summ;
+                        offset--;
+                        debounce = 0;
+                    }
+                }
+
+                var r = (sum > 0) ^ (lastData);
+                lastData = sum > 0;
+                return r;
+            }
+
+            void PushNextBit(bool bit)
+            {
+                if (bit)
+                    bytes[nByte] |= Utils.Maths.LittleByteMask[nBit];
+
+                nBit++;
+                
+                if (nBit != 8)
+                    return;
+                nBit = 0;
+                nByte++;
+            }
+        }
+
+        private byte[] CalcFrame(in IEnumerable<float> sums, int frameBytes)
+        {
+            var bytes = new byte[frameBytes];
             var nByte = 0;
             var nBit = 0;
             var lastData = false;
@@ -89,7 +169,7 @@ namespace Athernet.Modulators
 
             GetNextBit();
 
-            for (var i = 0; i < FrameBytes; i++)
+            for (var i = 0; i < frameBytes; i++)
             {
                 for (var j = 0; j < 8; j++)
                 {

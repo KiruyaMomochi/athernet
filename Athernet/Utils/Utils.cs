@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -160,6 +161,33 @@ namespace Athernet.Utils
             File.WriteAllText(path, String.Join(", ", buffer));
         }
 
+        public static void WriteTempWav(float[] samples, string filename)
+        {
+            var path = Path.Combine(Path.GetTempPath(), filename);
+            var file = new FileInfo(path);
+            try
+            {
+                using Stream stream = file.Open(FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                using var wave = new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(48000, 1));
+                var provider = new Athernet.SampleProviders.MonoRawSampleProvider(samples).ToWaveProvider();
+                var bytebuffer = new byte[48000];
+
+                var len = 48000;
+
+                do
+                {
+                    len = provider.Read(bytebuffer, 0, 48000);
+                    wave.Write(bytebuffer, 0, len);
+                } while (len != 0);
+
+                Trace.WriteLine($"--- {filename} write success.");
+            }
+            catch (IOException)
+            {
+                Trace.WriteLine($"--- {filename} write failed.");
+            }
+        }
+
         public static void PrintResult(BitArray bits)
         {
             foreach (var bit in bits)
@@ -180,6 +208,17 @@ namespace Athernet.Utils
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
 
             var w = new WaveOutEvent();
+            w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
+            w.Play();
+
+            w.PlaybackStopped += (sender, args) => ewh.Set();
+            ewh.WaitOne();
+        }
+
+        public static void PlaySamples(IEnumerable<float> samples, Guid deviceGuid)
+        {
+            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            using var w = new DirectSoundOut(deviceGuid);
             w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
             w.Play();
 
