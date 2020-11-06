@@ -8,21 +8,38 @@ using static NWaves.Utils.MemoryOperationExtensions;
 
 namespace Athernet.Preambles.PreambleDetectors
 {
+    /// <summary>
+    /// Detect the position of preamble by cross correlation.
+    /// </summary>
     public class CrossCorrelationDetector
     {
-        public readonly int WindowSize = 200;
-        public readonly float[] Preamble;
+        /// <summary>
+        /// Size of the window.
+        /// A detection is valid only no any preamble can be found in <c>WindowSize</c>.
+        /// </summary>
+        public int WindowSize { get; set; } = 200;
 
+        /// <summary>
+        /// The preamble to detect.
+        /// </summary>
+        public float[] Preamble { get; }
+
+        /// <summary>
+        /// The size of FFT arrays, which must be the power of 2.
+        /// </summary>
         private int FftSize => Utils.Maths.Power2RoundUp(Preamble.Length + WindowSize);
 
+        // Fields used for FFT
         private readonly float[] _samples;
-        private readonly Convolver _convolver;
-
         private readonly float[] _kernel;
         private readonly float[] _output;
+        private readonly Convolver _convolver;
 
-        private int SampleLength => Preamble.Length + WindowSize;
-
+        /// <summary>
+        /// Build a new Cross Correlation Detector to detect <paramref name="preamble"/>.
+        /// </summary>
+        /// <param name="preamble">The preamble to be detected.</param>
+        /// <exception cref="NotSupportedException">Thrown when the preamble is empty.</exception>
         public CrossCorrelationDetector(float[] preamble)
         {
             if (preamble.Length == 0)
@@ -73,10 +90,10 @@ namespace Athernet.Preambles.PreambleDetectors
             }
 
             // Athernet.Utils.Debug.PlaySamples(_samples.Take(maxIndex).TakeLast(Preamble.Length));
-            if (maxIndex != -1)
-            {
-                Athernet.Utils.Debug.WriteTempWav(_samples.Take(maxIndex).TakeLast(Preamble.Length).ToArray(), "recv_preamble.wav");
-            }
+            // if (maxIndex != -1)
+            // {
+            //     Athernet.Utils.Debug.WriteTempWav(_samples.Take(maxIndex).TakeLast(Preamble.Length).ToArray(), "recv_preamble.wav");
+            // }
             return maxIndex;
         }
 
@@ -129,7 +146,8 @@ namespace Athernet.Preambles.PreambleDetectors
                     return offset + pos;
                 }
             }
-
+            
+            // No above ways successfully detected, we can't find the preamble.
             return -1;
         }
     }

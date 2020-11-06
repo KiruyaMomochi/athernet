@@ -92,7 +92,7 @@ namespace Athernet.Modulators
             var lastData = false;
             var offset = 1;
 
-            var debounce = 0;
+            var debounce = 2333; // a max number
 
             GetNextBit();
 
@@ -114,25 +114,29 @@ namespace Athernet.Modulators
                 for (var k = 0; k < BitDepth; k++)
                 {
                     sum += samples[offset + nSample] * carrier[nSample];
-                    summ += samples[offset + nSample - 1] * carrier[nSample];
-                    sump += samples[offset + nSample + 1] * carrier[nSample];
+                    if (debounce >= 100)
+                    {
+                        summ += samples[offset + nSample - 1] * carrier[nSample];
+                        sump += samples[offset + nSample + 1] * carrier[nSample];
+                    }
+
                     nSample++;
                 }
 
-                if (debounce >= 10)
+                if (debounce >= 100)
                 {
                     var (a0, am, ap) = (Math.Abs(sum), Math.Abs(summ), Math.Abs(sump));
                     
-                    if (ap > a0)
+                    if (ap - a0 > 0.1)
                     {
-                        Console.WriteLine($"Jump! from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                        Trace.WriteLine($"+ | from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
                         sum = sump;
                         offset++;
                         debounce = 0;
                     }
-                    else if (am > a0 && offset >= -1)
+                    else if (am - a0 > 0.1)
                     {
-                        Console.WriteLine($"Back! from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                        Trace.WriteLine($"- | from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
                         sum = summ;
                         offset--;
                         debounce = 0;

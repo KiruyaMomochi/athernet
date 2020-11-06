@@ -146,7 +146,7 @@ namespace Athernet.Physical
 
             // var samples = _buffer.Skip(1).Take(frameSamples).ToArray(); // hack
             var samples = _buffer.Take(frameSamples).ToArray(); // hack
-            Athernet.Utils.Debug.WriteTempWav(samples, "recv_body.wav");
+            // Athernet.Utils.Debug.WriteTempWav(samples, "recv_body.wav");
             _demodulateSamples.Post(samples);
             State = ReceiveState.Syncing;
             return true;

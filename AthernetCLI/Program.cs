@@ -18,7 +18,7 @@ namespace AthernetCLI
             // ListOutputDevice();
             // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             
-            ListUsingDevice();
+            // ListUsingDevice();
             // int cnt = 0;
             // for (int i = 0; i < 125; i++)
             // {
@@ -28,7 +28,7 @@ namespace AthernetCLI
             //         return;
             //     }       
             // }
-
+            
             Console.WriteLine($"Wrong packet number: {PlayReceive()}");
         }
 
@@ -65,13 +65,12 @@ namespace AthernetCLI
                 BitDepth = 48
             };
             var preamble = new WuPreambleBuilder(48000, 0.1f).Build();
-            Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
+            // Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
 
-            var physical = new Physical(modulator)
+            var physical = new Physical(modulator, 1000)
             {
                 Preamble = preamble,
-                PlayChannel = Channel.Mono,
-                PayloadBytes = 100
+                PlayChannel = Channel.Mono
             };
 
             byte[] template = new byte[physical.PayloadBytes];
@@ -96,13 +95,12 @@ namespace AthernetCLI
                 BitDepth = 3
             };
             var preamble = new WuPreambleBuilder(48000, 0.015f).Build();
-            Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
+            // Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
 
-            var physical = new Physical(modulator)
+            var physical = new Physical(modulator, 6250)
             {
                 Preamble = preamble,
-                PlayChannel = Channel.Mono,
-                PayloadBytes = 150
+                PlayChannel = Channel.Mono
             };
 
             byte[] template = new byte[(int) (physical.PayloadBytes)];
@@ -118,7 +116,7 @@ namespace AthernetCLI
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
             
             physical.StartReceive();
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 6250 / physical.PayloadBytes; i++)
             {
                 physical.Play(template);
             }
@@ -153,7 +151,7 @@ namespace AthernetCLI
 
                 Console.WriteLine();
 
-                if (irecv == 42)
+                if (irecv == 6250 / physical.PayloadBytes)
                 {
                     ewh.Set();
                 }

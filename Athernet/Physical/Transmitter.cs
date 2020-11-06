@@ -32,15 +32,22 @@ namespace Athernet.Physical
             Init();
         }
         
+        // TPL Blocks used for transmitter.
+        // AddCrc -> ModulateArray -> PlaySamples.
         private TransformBlock<IEnumerable<byte>, byte[]> _addCrc;
         private TransformBlock<byte[], float[]> _modulateArray;
         private ActionBlock<float[]> _playSamples;
-
+        
+        EventWaitHandle _playSamplesEventWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+        
         private void Init()
         {
+            // Initialize blocks.
             _addCrc = new TransformBlock<IEnumerable<byte>, byte[]>(AddCrc);
             _modulateArray = new TransformBlock<byte[], float[]>(s => Modulator.Modulate(s));
             _playSamples = new ActionBlock<float[]>(PlaySamples);
+            
+            // Link blocks.
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
             _addCrc.LinkTo(_modulateArray, linkOptions);
             _modulateArray.LinkTo(_playSamples, linkOptions);
@@ -50,7 +57,6 @@ namespace Athernet.Physical
         public void Play(IEnumerable<byte> bytes)
         {
             State = TransmitState.Transmitting;
-            
             _addCrc.Post(bytes);
         }
 
@@ -60,11 +66,10 @@ namespace Athernet.Physical
             {
                 return;
             }
-            
             _addCrc.Complete();
         }
 
-        private byte[] AddCrc(IEnumerable<byte> arg)
+        private static byte[] AddCrc(IEnumerable<byte> arg)
         {
             Trace.WriteLine("P1. Adding CRC to the incoming payload.");
             var arr = arg.Concat(new byte[4]).ToArray();
@@ -84,8 +89,7 @@ namespace Athernet.Physical
         {
             Trace.WriteLine($"P3. Playing samples.");
             
-            Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
-            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            // Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
             ISampleProvider provider = new MonoRawSampleProvider(SampleRate, Preamble.Concat(samples));
 
             provider = Channel switch
@@ -111,8 +115,8 @@ namespace Athernet.Physical
             wo.Init(provider);
             wo.Play();
 
-            wo.PlaybackStopped += (s, a) => { ewh.Set(); };
-            ewh.WaitOne();
+            wo.PlaybackStopped += (s, a) => { _playSamplesEventWaitHandle.Set(); };
+            _playSamplesEventWaitHandle.WaitOne();
             Trace.WriteLine($"P4. Finished playing.");
         }
 
