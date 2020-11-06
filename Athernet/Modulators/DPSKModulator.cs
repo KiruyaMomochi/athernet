@@ -92,7 +92,7 @@ namespace Athernet.Modulators
             var lastData = false;
             var offset = 1;
 
-            var debounce = 2333; // a max number
+            var debounce = 100; // a max number
 
             GetNextBit();
 

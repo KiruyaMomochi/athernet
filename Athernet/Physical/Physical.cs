@@ -1,6 +1,7 @@
 ﻿using Athernet.Modulators;
 using System;
 using System.IO;
+using NAudio.Wave;
 
 namespace Athernet.Physical
 {
@@ -109,7 +110,7 @@ namespace Athernet.Physical
         /// <summary>
         /// Indicate the playing process is stopped.
         /// </summary>
-        public event EventHandler PlayStopped
+        public event EventHandler<StoppedEventArgs> PlayStopped
         {
             add => _transmitter.PlayStopped += value;
             remove => _transmitter.PlayStopped -= value;
@@ -132,14 +133,24 @@ namespace Athernet.Physical
         /// </summary>
         /// <param name="payload">The payload to be played, whose length should be <c>PayloadBytes</c>.</param>
         /// <exception cref="InvalidDataException">Thrown when the payload length is not equal to <c>PayloadBytes</c>.</exception>
-        public void Play(byte[] payload)
+        public void AddPayload(byte[] payload)
         {
             if (payload.Length != PayloadBytes)
             {
                 throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
             }
-            _transmitter.Play(payload);
+            _transmitter.AddPayload(payload);
         }
+
+        /// <summary>
+        /// Start playing. If no payload provided, zero signal will be played.
+        /// </summary>
+        public void StartPlaying() => _transmitter.Play();
+        
+        /// <summary>
+        /// Stop playing.
+        /// </summary>
+        public void StopPlaying() => _transmitter.Stop(); 
 
         /// <summary>
         /// Start receive new frames.

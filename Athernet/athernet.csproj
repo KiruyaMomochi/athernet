@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Mac" />
     <Folder Include="Projects\Project1" />
   </ItemGroup>
 

@@ -7,29 +7,43 @@ using Athernet.Preambles.PreambleBuilders;
 using System.Threading;
 using System.IO;
 using System.Linq;
+using Athernet.Mac;
 using Athernet.Physical;
+using NAudio.Wave.SampleProviders;
 
 namespace AthernetCLI
 {
     class Program
     {
-        private static void Main(string[] args)
+        private static Physical _physical;
+
+        private static unsafe void Main(string[] args)
         {
             // ListOutputDevice();
             Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             
-            // ListUsingDevice();
-            // int cnt = 0;
-            // for (int i = 0; i < 125; i++)
-            // {
-            //     if (PlayReceive() == false)
-            //     {
-            //         cnt++;
-            //         return;
-            //     }       
-            // }
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            Console.WriteLine($"Wrong packet number: {PlayReceive()}");
+            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+
+            // Console.WriteLine(frame.Src);
+            
+            var modulator = new DpskModulator(48000, 8000)
+            {
+                BitDepth = 3
+            };
+            var preamble = new WuPreambleBuilder(48000, 0.015f).Build();
+                        _physical = new Physical(modulator, 1000)
+            {
+                Preamble = preamble,
+                PlayChannel = Channel.Mono
+            };
+            _physical.StartPlaying();
+            
+            PlayReceive();
+
+            _physical.PlayStopped += (sender, eventArgs) => ewh.Set();
+            ewh.WaitOne();
+            
             watch.Stop();
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
@@ -69,7 +83,7 @@ namespace AthernetCLI
             var preamble = new WuPreambleBuilder(48000, 0.1f).Build();
             // Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
 
-            var physical = new Physical(modulator, 1000)
+            var physical = new Physical(modulator, 6250)
             {
                 Preamble = preamble,
                 PlayChannel = Channel.Mono
@@ -84,7 +98,7 @@ namespace AthernetCLI
 
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
 
-            physical.Play(template);
+            physical.AddPayload(template);
             physical.PlayStopped += (sender, args) => ewh.Set();
 
             ewh.WaitOne();
@@ -92,20 +106,9 @@ namespace AthernetCLI
 
         private static int PlayReceive()
         {
-            var modulator = new DpskModulator(48000, 8000)
-            {
-                BitDepth = 3
-            };
-            var preamble = new WuPreambleBuilder(48000, 0.015f).Build();
             // Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
 
-            var physical = new Physical(modulator, 1000)
-            {
-                Preamble = preamble,
-                PlayChannel = Channel.Mono
-            };
-
-            byte[] template = new byte[(int) (physical.PayloadBytes)];
+            byte[] template = new byte[(int) (_physical.PayloadBytes)];
             byte[] result = new byte[0];
 
             int wrongcnt = 0;
@@ -117,16 +120,16 @@ namespace AthernetCLI
 
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
             
-            physical.StartReceive();
-            for (int i = 0; i < 6250 / physical.PayloadBytes; i++)
+            // physical.StartReceive();
+            for (int i = 0; i < 6250 / _physical.PayloadBytes; i++)
             {
-                physical.Play(template);
+                _physical.AddPayload(template);
             }
 
             int irecv = 0;
-            physical.PacketDetected += (sender, eventArgs)
+            _physical.PacketDetected += (sender, eventArgs)
                 => Console.WriteLine("New packet detected.");
-            physical.DataAvailable += (sender, eventArgs) =>
+            _physical.DataAvailable += (sender, eventArgs) =>
             {
                 irecv++;
                 
@@ -153,14 +156,14 @@ namespace AthernetCLI
 
                 Console.WriteLine();
 
-                if (irecv == 6250 / physical.PayloadBytes)
+                if (irecv == 6250 / _physical.PayloadBytes)
                 {
                     ewh.Set();
                 }
             };
 
-            ewh.WaitOne();
-            physical.StopReceive();
+            // ewh.WaitOne();
+            // physical.StopReceive();
 
             return wrongcnt;
         }
