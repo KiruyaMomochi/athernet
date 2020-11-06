@@ -30,7 +30,7 @@ namespace AthernetCLI
         {
             ListUsingDevice();
 
-            // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             var node1 = new Mac(1, 100, 0, 0);

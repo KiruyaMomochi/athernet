@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Athernet.Modulators;
 using Athernet.Preambles.PreambleDetectors;
@@ -79,11 +80,21 @@ namespace Athernet.PhysicalLayer
                 WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1),
                 DeviceNumber = DeviceNumber
             };
-            _recorder.DataAvailable += (s, e) =>
-                AddSamples(Utils.Audio.ToFloatBuffer(e.Buffer, e.BytesRecorded, _recorder.WaveFormat.BitsPerSample));
+            _recorder.DataAvailable += RecorderOnDataAvailable;
             _recorder.RecordingStopped += (s, e) => _demodulateSamples.Complete();
             _recorder.StartRecording();
         }
+
+        private void RecorderOnDataAvailable(object sender, WaveInEventArgs e)
+        {
+            var floatBuffer = Utils.Audio.ToFloatBuffer(e.Buffer, e.BytesRecorded, _recorder.WaveFormat.BitsPerSample);
+            var t1 = Task.Run(() => AddSamples(floatBuffer));
+            var t2 = Task.Run(() => _channelPower = floatBuffer.Select(x => x * x).Average());
+            // Task.WaitAll(t1);
+        }
+
+        private float _channelPower;
+        public bool ChannelFree => _channelPower < 0.01;
 
         private void InitReceiver()
         {
