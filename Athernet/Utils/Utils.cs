@@ -141,7 +141,7 @@ namespace Athernet.Utils
         public static IEnumerable<float> ToFloatBuffer(in byte[] buffer, in int bytesRecorded, in int bitsPerSample)
         {
             var wave = new WaveBuffer(buffer);
-
+                
             var floatBuffer = bitsPerSample switch
             {
                 16 => wave.ShortBuffer.Take(bytesRecorded / 2).Select(x => (float) x),

@@ -1,24 +1,21 @@
-﻿using Athernet.Modulators;
-using Athernet.Preambles.PreambleDetectors;
-using NAudio.Wave;
-using System;
-using System.Buffers;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO.Pipelines;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using Athernet.Modulators;
+using Athernet.Preambles.PreambleDetectors;
 using Force.Crc32;
+using NAudio.Wave;
 
-namespace Athernet.Physical
+namespace Athernet.PhysicalLayer
 {
     /// <summary>
     /// Receiver of the physical layer
     /// </summary>
     public sealed class Receiver
     {
-        public int DeviceNumber { get; set; }
+        public int DeviceNumber { get; }
         public int PayloadBytes { get; set; }
         public float[] Preamble { get; set; } = new float[0];
         public IModulator Modulator { get; set; }
@@ -33,9 +30,10 @@ namespace Athernet.Physical
 
         public event EventHandler PacketDetected;
 
-        public Receiver(IModulator modulator)
+        public Receiver(IModulator modulator, int deviceNumber = 0)
         {
             Modulator = modulator;
+            DeviceNumber = deviceNumber;
         }
 
         public void StartReceive()
@@ -66,8 +64,8 @@ namespace Athernet.Physical
         private WaveInEvent _recorder;
 
         private TransformBlock<float[], byte[]> _demodulateSamples;
-        private TransformBlock<byte[], byte[]> _validateCrc;
-        private ActionBlock<byte[]> _dataAvailable;
+        private TransformBlock<byte[], DataAvailableEventArgs> _validateCrc;
+        private ActionBlock<DataAvailableEventArgs> _dataAvailable;
         private static readonly DataflowLinkOptions LinkOptions = new DataflowLinkOptions {PropagateCompletion = true};
         private float[] _buffer = new float[0];
         
@@ -90,19 +88,19 @@ namespace Athernet.Physical
         private void InitReceiver()
         {
             _demodulateSamples = new TransformBlock<float[], byte[]>(DemodulateSamples);
-            _validateCrc = new TransformBlock<byte[], byte[]>(ValidateCrc);
-            _dataAvailable = new ActionBlock<byte[]>(OnDataAvailable);
+            _validateCrc = new TransformBlock<byte[], DataAvailableEventArgs>(ValidateCrc);
+            _dataAvailable = new ActionBlock<DataAvailableEventArgs>(OnDataAvailable);
             
             _demodulateSamples.LinkTo(_validateCrc, LinkOptions);
             _validateCrc.LinkTo(_dataAvailable, LinkOptions);
         }
 
-        private byte[] ValidateCrc(byte[] arg)
+        private DataAvailableEventArgs ValidateCrc(byte[] arg)
         {
             var res = Crc32Algorithm.IsValidWithCrcAtEnd(arg);
             Trace.WriteLine($"R4. Validating CRC: {res}.");
             // return res ? arg.Take(arg.Length - 4).ToArray() : null;
-            return arg.Take(arg.Length - 4).ToArray();
+            return new DataAvailableEventArgs(arg.Take(arg.Length - 4).ToArray(), res);
         }
 
         private byte[] DemodulateSamples(float[] samples) => Modulator.Demodulate(samples, PayloadBytes + 4);
@@ -184,20 +182,15 @@ namespace Athernet.Physical
         }
 
 
-        private void OnDataAvailable(byte[] data)
+        private void OnDataAvailable(DataAvailableEventArgs args)
         {
-            Trace.WriteLine($"R5. New data available, length: {data.Length}.");
-            DataAvailable?.Invoke(this, new DataAvailableEventArgs() {Data = data});
+            Trace.WriteLine($"R5. New data available, length: {args.Data.Length}.");
+            DataAvailable?.Invoke(this, args);
         }
 
         private void OnPacketDetected()
         {
             PacketDetected?.Invoke(this, EventArgs.Empty);
         }
-    }
-
-    public class DataAvailableEventArgs : EventArgs
-    {
-        public byte[] Data { get; internal set; }
     }
 }

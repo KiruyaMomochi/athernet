@@ -1,4 +1,4 @@
-namespace Athernet.Physical
+namespace Athernet.PhysicalLayer
 {
     /// <summary>
     /// Channels to use 

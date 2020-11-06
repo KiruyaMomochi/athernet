@@ -1,9 +1,9 @@
-﻿using Athernet.Modulators;
-using System;
+﻿using System;
 using System.IO;
+using Athernet.Modulators;
 using NAudio.Wave;
 
-namespace Athernet.Physical
+namespace Athernet.PhysicalLayer
 {
     /// <summary>
     /// The physical layer of Athernet
@@ -25,20 +25,12 @@ namespace Athernet.Physical
         /// <summary>
         /// Number of the device to play the sound.
         /// </summary>
-        public int PlayDeviceNumber
-        {
-            get => _transmitter.DeviceNumber;
-            set => _transmitter.DeviceNumber = value;
-        }
+        public int PlayDeviceNumber => _transmitter.DeviceNumber;
 
         /// <summary>
         /// Number of the device to record the sound.
         /// </summary>
-        public int RecordDeviceNumber
-        {
-            get => _receiver.DeviceNumber;
-            set => _receiver.DeviceNumber = value;
-        }
+        public int RecordDeviceNumber => _receiver.DeviceNumber;
 
         /// <summary>
         /// The preamble to prepend before the frame body.
@@ -115,16 +107,27 @@ namespace Athernet.Physical
             add => _transmitter.PlayStopped += value;
             remove => _transmitter.PlayStopped -= value;
         }
+        
+        /// <summary>
+        /// Indicate the playing process is complete.
+        /// </summary>
+        public event EventHandler<StoppedEventArgs> PlayComplete
+        {
+            add => _transmitter.PlayComplete += value;
+            remove => _transmitter.PlayComplete -= value;
+        }
 
         /// <summary>
         /// Physical layer constructor.
         /// </summary>
-        /// <param name="modulator">The modulator to use with.</param>
         /// <param name="payloadBytes">The length of payload in bytes.</param>
-        public Physical(IModulator modulator, int payloadBytes)
+        /// <param name="modulator">The modulator to use with.</param>
+        /// <param name="playDeviceNumber">The device number of player.</param>
+        /// <param name="recordDeviceNumber">The device number of recorder.</param>
+        public Physical(int payloadBytes, IModulator modulator, int playDeviceNumber = 0, int recordDeviceNumber = 0)
         {
-            _transmitter = new Transmitter(modulator);
-            _receiver = new Receiver(modulator);
+            _transmitter = new Transmitter(modulator, playDeviceNumber);
+            _receiver = new Receiver(modulator, recordDeviceNumber);
             PayloadBytes = payloadBytes;
         }
         
@@ -141,16 +144,11 @@ namespace Athernet.Physical
             }
             _transmitter.AddPayload(payload);
         }
-
-        /// <summary>
-        /// Start playing. If no payload provided, zero signal will be played.
-        /// </summary>
-        public void StartPlaying() => _transmitter.Play();
         
         /// <summary>
         /// Stop playing.
         /// </summary>
-        public void StopPlaying() => _transmitter.Stop(); 
+        public void CompletePlaying() => _transmitter.Complete(); 
 
         /// <summary>
         /// Start receive new frames.

@@ -5,16 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using Athernet.Modulators;
-using Athernet.SampleProviders;
 using Force.Crc32;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 
-namespace Athernet.Physical
+namespace Athernet.PhysicalLayer
 {
     public sealed class Transmitter
     {
-        public int DeviceNumber { get; set; }
+        public int DeviceNumber => _wo.DeviceNumber;
 
         public int SampleRate => Modulator.SampleRate;
 
@@ -28,7 +26,6 @@ namespace Athernet.Physical
 
         private readonly BufferedWaveProvider _provider;
 
-
         private readonly WaveOutEvent _wo;
 
         /// <summary>
@@ -36,25 +33,29 @@ namespace Athernet.Physical
         /// </summary>
         public event EventHandler<StoppedEventArgs> PlayStopped;
 
-        public Transmitter(IModulator modulator, int bufferLength = 19200000)
+        /// <summary>
+        /// Indicates the playing is complete
+        /// </summary>
+        public event EventHandler<StoppedEventArgs> PlayComplete;
+
+        public Transmitter(IModulator modulator, int deviceNumber = 0,int bufferLength = 19200000)
         {
             Modulator = modulator;
             _provider = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, 1))
             {
-                BufferLength = bufferLength
+                BufferLength = bufferLength,
+                ReadFully = false
             };
-            _wo = new WaveOutEvent
+            _wo = new WaveOutEvent()
             {
-                DeviceNumber = DeviceNumber
+                DeviceNumber = deviceNumber
             };
 
             Init();
         }
 
         // TPL Blocks used for transmitter.
-
         // AddCrc -> ModulateArray -> PlaySamples.
-
         private TransformBlock<IEnumerable<byte>, byte[]> _addCrc;
 
         private TransformBlock<byte[], float[]> _modulateArray;
@@ -74,32 +75,26 @@ namespace Athernet.Physical
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
             _addCrc.LinkTo(_modulateArray, linkOptions);
             _modulateArray.LinkTo(_playSamples, linkOptions);
-            
+
             // Init WaveOutEvent
             _wo.Init(_provider);
+            _wo.PlaybackStopped += (s, a) => { OnPlayStopped(a); };
         }
 
         public void AddPayload(IEnumerable<byte> bytes)
         {
+            State = TransmitState.Transmitting;
             _addCrc.Post(bytes);
         }
 
-        public void Play()
-        {
-            State = TransmitState.Transmitting;
-            _wo.Play();
-            _wo.PlaybackStopped += (s, a) => { OnPlayStopped(a); };
-        }
-
-        public void Stop()
+        public void Complete()
         {
             if (State == TransmitState.Idle)
             {
                 return;
             }
-            
+
             _addCrc.Complete();
-            _wo.Stop();
         }
 
         private static byte[] AddCrc(IEnumerable<byte> arg)
@@ -120,7 +115,7 @@ namespace Athernet.Physical
 
         private void AddSamples(float[] samples)
         {
-            Trace.WriteLine($"P3. Playing samples.");
+            Trace.WriteLine($"P3. Playing samples {samples.Length}.");
 
             // Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
             var byteFrame = new byte[(Preamble.Length + samples.Length) * 4];
@@ -132,14 +127,25 @@ namespace Athernet.Physical
             {
                 throw new NotImplementedException();
             }
-            
+
             _provider.AddSamples(byteFrame, 0, byteFrame.Length);
+            _wo.Play();
         }
 
         private void OnPlayStopped(StoppedEventArgs e)
         {
-            State = TransmitState.Idle;
             PlayStopped?.Invoke(this, e);
+
+            if (_playSamples.Completion.IsCompleted)
+            {
+                OnPlayComplete(e);
+            }
+        }
+
+        private void OnPlayComplete(StoppedEventArgs e)
+        {
+            State = TransmitState.Idle;
+            PlayComplete?.Invoke(this, e);
         }
     }
 }
