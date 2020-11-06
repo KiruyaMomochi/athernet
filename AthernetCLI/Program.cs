@@ -16,7 +16,7 @@ namespace AthernetCLI
         private static void Main(string[] args)
         {
             // ListOutputDevice();
-            // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             
             // ListUsingDevice();
             // int cnt = 0;
@@ -28,8 +28,10 @@ namespace AthernetCLI
             //         return;
             //     }       
             // }
-            
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             Console.WriteLine($"Wrong packet number: {PlayReceive()}");
+            watch.Stop();
+            Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
 
         private static void ListAllDevices()
@@ -97,7 +99,7 @@ namespace AthernetCLI
             var preamble = new WuPreambleBuilder(48000, 0.015f).Build();
             // Athernet.Utils.Debug.WriteTempWav(preamble, "real_preamble.wav");
 
-            var physical = new Physical(modulator, 6250)
+            var physical = new Physical(modulator, 1000)
             {
                 Preamble = preamble,
                 PlayChannel = Channel.Mono
