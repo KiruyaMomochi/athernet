@@ -161,6 +161,7 @@ namespace Athernet.PhysicalLayer
         /// When new frame arrived, DataAvailable will raise.
         /// </summary>
         public void StopReceive() => _receiver.StopReceive();
-        
+
+        internal bool ChannelFree => _receiver.ChannelFree;
     }
 }

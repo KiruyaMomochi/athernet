@@ -15,12 +15,12 @@ namespace AthernetCLI
 {
     class Program
     {
-        private static byte[] RandomByteBuilder(int length)
+        private static byte[] RandomByteBuilder(int length, int num)
         {
             byte[] res = new byte[length];
             for (int i = 0; i < length; i++)
             {
-                res[i] = (byte)i;
+                res[i] = (byte)(i+num);
             }
 
             return res;
@@ -30,7 +30,7 @@ namespace AthernetCLI
         {
             ListUsingDevice();
 
-            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             var node1 = new Mac(1, 100, 0, 0);
@@ -38,10 +38,14 @@ namespace AthernetCLI
 
             node2.StartReceive();
             node1.StartReceive();
+            node2.DataAvailable += (sender, eventArgs) => Console.WriteLine(eventArgs.Data[56]);
+            node1.DataAvailable += (sender, eventArgs) => Console.WriteLine(eventArgs.Data[56]);
+            
             for (int i = 0; i < 6250 / node1.PayloadBytes; i++)
             {
-                node1.AddData(2, RandomByteBuilder(node1.PayloadBytes));
+                node1.AddData(2, RandomByteBuilder(node1.PayloadBytes, i+41));
             }
+            // Thread.Sleep(10000);
 
             watch.Stop();
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");

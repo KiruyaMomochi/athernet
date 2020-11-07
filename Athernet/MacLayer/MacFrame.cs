@@ -29,7 +29,8 @@ namespace Athernet.MacLayer
             Frame = new byte[payload.Length + 3];
             Dest = dest;
             Src = src;
-            type = Type;
+            Type = type;
+            Payload = new Span<byte>(Frame).Slice(3);
             Buffer.BlockCopy(payload, 0, Frame, 3, payload.Length);
         }
         
@@ -40,7 +41,8 @@ namespace Athernet.MacLayer
             Dest = dest;
             Src = src;
             Type = type;
-            Payload = payload;
+            Payload = new Span<byte>(Frame).Slice(3);
+            payload.CopyTo(Payload);
         }
 
     public static MacFrame Parse(byte[] frame)

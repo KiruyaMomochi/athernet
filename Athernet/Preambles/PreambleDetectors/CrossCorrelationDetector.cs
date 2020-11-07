@@ -44,7 +44,7 @@ namespace Athernet.Preambles.PreambleDetectors
         {
             if (preamble.Length == 0)
                 throw new NotSupportedException("Preamble should not be empty.");
-            
+
             Preamble = preamble;
             _convolver = new Convolver(FftSize);
 
@@ -61,7 +61,7 @@ namespace Athernet.Preambles.PreambleDetectors
             // Athernet.Utils.Debug.PlaySamples(_samples);
 
             _convolver.CrossCorrelate(_samples, _kernel, _output);
-            
+
             // Find the index of the max
             float localPower = 0;
             var localMaximum = float.MinValue;
@@ -72,12 +72,12 @@ namespace Athernet.Preambles.PreambleDetectors
             {
                 localPower = localPower * 63 / 64 + _output[i] * _output[i] / 64;
             }
-            
+
             for (; i < _output.Length; i++)
             {
                 localPower = localPower * 63 / 64 + _output[i] * _output[i] / 64;
 
-                if (_output[i] < localMaximum || _output[i] < 120)
+                if (_output[i] < localMaximum || _output[i] < 100)
                     continue;
                 if (_output[i] * 3 > localPower)
                 {
@@ -111,7 +111,7 @@ namespace Athernet.Preambles.PreambleDetectors
             while (samples.Length - offset >= FftSize)
             {
                 samples.FastCopyTo(_samples, FftSize, offset);
-                
+
                 // Find the last index of preamble.
                 // It's valid only if it is not less than Preamble.Length-1 (Case 1, 2).
                 var pos = CrossCorrelate();
@@ -121,7 +121,7 @@ namespace Athernet.Preambles.PreambleDetectors
                 {
                     return offset + pos;
                 }
-                
+
                 // Case 2: the index stays in [Length-WindowSize, Length).
                 if (pos >= FftSize - WindowSize)
                 {
@@ -130,7 +130,7 @@ namespace Athernet.Preambles.PreambleDetectors
                 }
 
                 // Case 3: the index is not found.
-                offset = offset + FftSize - Preamble.Length; 
+                offset = offset + FftSize - Preamble.Length;
             }
 
             // Tail case: the length is shorter than FFT size, but still possible for a detection.
@@ -138,7 +138,7 @@ namespace Athernet.Preambles.PreambleDetectors
             {
                 Array.Clear(_samples, 0, FftSize);
                 samples.FastCopyTo(_samples, samples.Length - offset, offset);
-                
+
                 var pos = CrossCorrelate();
 
                 if (pos >= Preamble.Length - 1 && pos < samples.Length - offset - WindowSize)
@@ -146,7 +146,7 @@ namespace Athernet.Preambles.PreambleDetectors
                     return offset + pos;
                 }
             }
-            
+
             // No above ways successfully detected, we can't find the preamble.
             return -1;
         }

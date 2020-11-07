@@ -207,7 +207,10 @@ namespace Athernet.Utils
         {
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
 
-            var w = new WaveOutEvent();
+            var w = new WaveOutEvent
+            {
+                DeviceNumber = 1
+            };
             w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
             w.Play();
 

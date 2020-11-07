@@ -3,6 +3,7 @@ using NWaves.Signals;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Athernet.Modulators
 {
@@ -21,12 +22,9 @@ namespace Athernet.Modulators
         public override byte[] Demodulate(float[] samples, int frameBytes)
         {
             Trace.WriteLine($"R3. Demodulate using {this.GetType().Name}.");
-            
+
             // Athernet.Utils.Debug.PlaySamples(samples);
             var demodulateCarrier = NewSineSignal();
-            var frameBits = frameBytes * 8;
-            
-            demodulateCarrier.Reset(FindPhase(samples, demodulateCarrier));
 
             samples = ApplyFiltersBeforeMultiply(samples);
             // demodulateCarrier.Reset();
@@ -34,10 +32,7 @@ namespace Athernet.Modulators
 
             // sums = ApplyFiltersAfterMultiply(sums);
 
-            var carrierSamples = new float[samples.Length];
-            demodulateCarrier.Read(carrierSamples, 0, carrierSamples.Length);
-
-            return CalcFrame(samples, carrierSamples, frameBytes);
+            return CalcFrame(samples, demodulateCarrier, frameBytes);
         }
 
         private float FindPhase(in float[] signal, SineGenerator carrier)
@@ -45,7 +40,7 @@ namespace Athernet.Modulators
             float maxSum = 0, maxPhase = 0;
             float[] carrierBuf = new float[BitDepth];
 
-            for (float i = -(float) Math.PI / 2; i < Math.PI / 2; i += 0.1f)
+            for (float i = -(float) Math.PI / 10; i < Math.PI / 10; i += 0.01f)
             {
                 carrier.Reset(i);
                 carrier.Read(carrierBuf, 0, BitDepth);
@@ -83,7 +78,7 @@ namespace Athernet.Modulators
             return sums;
         }
 
-        private byte[] CalcFrame(float[] samples, float[] carrier, int frameBytes)
+        private byte[] CalcFrame(float[] samples, SineGenerator demodulateCarrier, int frameBytes)
         {
             var bytes = new byte[frameBytes];
             var nByte = 0;
@@ -92,9 +87,11 @@ namespace Athernet.Modulators
             var lastData = false;
             var offset = 1;
 
-            var debounce = 99; // a max number
+            var debounce = 233; // a max number
 
-            GetNextBit();
+            var carrier = new float[samples.Length];
+            demodulateCarrier.Read(carrier, 0, carrier.Length);
+            GetFirstBit();
 
             for (var i = 0; i < frameBytes; i++)
             {
@@ -106,15 +103,60 @@ namespace Athernet.Modulators
 
             return bytes;
 
+
+            void GetFirstBit()
+            {
+                float sum = 0, sump1 = 0, sump2 = 0, summ = 0;
+                for (var k = 0; k < BitDepth; k++)
+                {
+                    sum += samples[offset + nSample] * carrier[nSample];
+                    summ += samples[offset + nSample - 1] * carrier[nSample];
+                    sump1 += samples[offset + nSample + 1] * carrier[nSample];
+                    sump2 += samples[offset + nSample + 2] * carrier[nSample];
+
+                    nSample++;
+                }
+
+                // var max = new []{sum, sump1, sump2, summ}.Max();
+                
+                Trace.WriteLine($"? | {sum}, {sump1}, {sump2}, {summ}");
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (sump1 > sum)
+                {
+                    offset++;
+                    Trace.WriteLine(
+                        $"+ | from {sum} to {sump1} at {nSample - 3}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                    sum = sump1;
+                }
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                else if (summ > sum)
+                {
+                    offset--;
+                    Trace.WriteLine(
+                        $"- | from {sum} to {summ} at {nSample - 3}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                    sum = summ;
+                }
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                else if (sump2 > sum)
+                {
+                    offset += 2;
+                    Trace.WriteLine(
+                        $"+ | from {sum} to {sump2} at {nSample - 3}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                    sum = sump1;
+                }
+
+                lastData = sum > 0;
+            }
+
             bool GetNextBit()
             {
                 debounce++;
-                
+
                 float sum = 0, sump = 0, summ = 0;
                 for (var k = 0; k < BitDepth; k++)
                 {
                     sum += samples[offset + nSample] * carrier[nSample];
-                    if (debounce >= 100)
+                    if (debounce >= 50)
                     {
                         summ += samples[offset + nSample - 1] * carrier[nSample];
                         sump += samples[offset + nSample + 1] * carrier[nSample];
@@ -123,22 +165,25 @@ namespace Athernet.Modulators
                     nSample++;
                 }
 
-                if (debounce >= 100)
+                if (debounce >= 50)
                 {
                     var (a0, am, ap) = (Math.Abs(sum), Math.Abs(summ), Math.Abs(sump));
-                    
-                    if (ap - a0 > 0.1)
+                    // Console.WriteLine($"? | {sum}, {sump}, {summ}");
+
+                    if (ap - a0 > 0.05 && sum * sump > 0)
                     {
-                        Trace.WriteLine($"+ | from {sum} to {sump} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
-                        sum = sump;
                         offset++;
+                        Trace.WriteLine(
+                            $"+ | from {sum} to {sump} at {nSample - 3}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                        sum = sump;
                         debounce = 0;
                     }
-                    else if (am - a0 > 0.1)
+                    else if (am - a0 > 0.05 && sum * summ > 0)
                     {
-                        Trace.WriteLine($"- | from {sum} to {summ} at {nSample}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
-                        sum = summ;
                         offset--;
+                        Trace.WriteLine(
+                            $"- | from {sum} to {summ} at {nSample - 3}-th sample, {nByte} byte, {nBit} bit.\t Offset: {offset}");
+                        sum = summ;
                         debounce = 0;
                     }
                 }
@@ -154,7 +199,7 @@ namespace Athernet.Modulators
                     bytes[nByte] |= Utils.Maths.LittleByteMask[nBit];
 
                 nBit++;
-                
+
                 if (nBit != 8)
                     return;
                 nBit = 0;
@@ -203,7 +248,7 @@ namespace Athernet.Modulators
                     bytes[nByte] |= Utils.Maths.LittleByteMask[nBit];
 
                 nBit++;
-                
+
                 if (nBit != 8)
                     return;
                 nBit = 0;

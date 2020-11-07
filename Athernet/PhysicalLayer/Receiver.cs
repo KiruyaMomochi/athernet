@@ -78,7 +78,8 @@ namespace Athernet.PhysicalLayer
             _recorder = new WaveInEvent()
             {
                 WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1),
-                DeviceNumber = DeviceNumber
+                DeviceNumber = DeviceNumber,
+                BufferMilliseconds = 50
             };
             _recorder.DataAvailable += RecorderOnDataAvailable;
             _recorder.RecordingStopped += (s, e) => _demodulateSamples.Complete();
@@ -87,14 +88,13 @@ namespace Athernet.PhysicalLayer
 
         private void RecorderOnDataAvailable(object sender, WaveInEventArgs e)
         {
-            var floatBuffer = Utils.Audio.ToFloatBuffer(e.Buffer, e.BytesRecorded, _recorder.WaveFormat.BitsPerSample);
-            var t1 = Task.Run(() => AddSamples(floatBuffer));
-            var t2 = Task.Run(() => _channelPower = floatBuffer.Select(x => x * x).Average());
-            // Task.WaitAll(t1);
+            var floatBuffer = Utils.Audio.ToFloatBuffer(e.Buffer, e.BytesRecorded, _recorder.WaveFormat.BitsPerSample).ToArray();
+            Task.Run(() => _channelPower = floatBuffer.TakeLast(100).Select(x => x * x).Average());
+            AddSamples(floatBuffer);
         }
 
         private float _channelPower;
-        public bool ChannelFree => _channelPower < 0.01;
+        public bool ChannelFree => _channelPower < 0.02;
 
         private void InitReceiver()
         {
@@ -120,8 +120,14 @@ namespace Athernet.PhysicalLayer
 
         private void AddSamples(IEnumerable<float> samples)
         {
+            if (DeviceNumber == 3)
+            {
+                Console.WriteLine($"Rt{DeviceNumber} Channel free: {ChannelFree}\t{_channelPower}");
+            }
+            // Trace.WriteLine($"Rx{DeviceNumber}: Channel Power {_channelPower}");
             _buffer = _buffer.Concat(samples).ToArray();
             // Athernet.Utils.Debug.WriteTempWav(_buffer.ToArray(), $"test_{_idx++}.wav");
+            
             var flag = true;
 
             while (flag)
@@ -146,15 +152,17 @@ namespace Athernet.PhysicalLayer
 
         private bool DecodeBuffer()
         {
-            Trace.WriteLine($"R2. Decoding buffer.");
+            Trace.WriteLine($"R2{DeviceNumber} Decoding buffer.");
             // CRC
-            var frameSamples = ((PayloadBytes + 4) * 8 + 1) * Modulator.BitDepth + 100;
+            var realFrameSamples = ((PayloadBytes + 4) * 8 + 1) * Modulator.BitDepth; 
+            var frameSamples = realFrameSamples + 100;
 
             if (_buffer.Length < frameSamples)
                 return false;
 
             // var samples = _buffer.Skip(1).Take(frameSamples).ToArray(); // hack
             var samples = _buffer.Take(frameSamples).ToArray(); // hack
+            _buffer = _buffer.Skip(realFrameSamples).ToArray();
             // Athernet.Utils.Debug.WriteTempWav(samples, "recv_body.wav");
             _demodulateSamples.Post(samples);
             State = ReceiveState.Syncing;
@@ -168,7 +176,7 @@ namespace Athernet.PhysicalLayer
 
             if (pos != -1)
             {
-                Trace.WriteLine($"R1. Found preamble at pos {pos}.");
+                Trace.WriteLine($"R1{DeviceNumber} Found preamble at pos {pos}.");
                 _buffer = _buffer.Skip(pos).ToArray();
                 State = ReceiveState.Decoding;
                 OnPacketDetected();

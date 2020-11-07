@@ -5,6 +5,7 @@ namespace Athernet.MacLayer
         Data,
         Ack,
         // ReSharper disable once IdentifierTypo
-        MacpingReq
+        MacpingReq,
+        ReTrans
     }
 }
