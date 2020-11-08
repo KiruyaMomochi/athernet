@@ -17,7 +17,7 @@ namespace MacPerf
             int payloadBytes = 200;
 
             // var node1 = new Mac(1, payloadBytes, 1, 1);
-            var node2 = new Mac(2, payloadBytes, 2, 2);
+            var node2 = new Mac(2, payloadBytes, 0, 0);
 
             // node1.StartReceive();
             node2.StartReceive();

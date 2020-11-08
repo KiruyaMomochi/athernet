@@ -44,21 +44,21 @@ namespace AthernetCLI
         private static byte[] DoTask(string fileName, int payloadBytes = 500)
         {
             var file = new FileInfo(fileName);
-            var o = new byte[6250];
-            var offset = 0;
+            // var o = new byte[6250];
+            // var offset = 0;
             
-            var node1 = new Mac(1, payloadBytes, 1, 1);
-            var node2 = new Mac(2, payloadBytes, 3, 3);
+            var node1 = new Mac(1, payloadBytes, 0, 0);
+            // var node2 = new Mac(2, payloadBytes, 3, 3);
             
             node1.StartReceive();
-            node2.StartReceive();
+            // node2.StartReceive();
 
-            node2.DataAvailable += (sender, eventArgs) =>
-            {
-                var rem = 6250 - offset;
-                Buffer.BlockCopy(eventArgs.Data, 0, o, offset, Math.Min(rem, eventArgs.Data.Length));
-                offset += payloadBytes;
-            };
+            // node2.DataAvailable += (sender, eventArgs) =>
+            // {
+            //     var rem = 6250 - offset;
+            //     Buffer.BlockCopy(eventArgs.Data, 0, o, offset, Math.Min(rem, eventArgs.Data.Length));
+            //     offset += payloadBytes;
+            // };
 
             var buffer = new byte[6250];
             file.OpenRead().Read(buffer);
@@ -71,8 +71,8 @@ namespace AthernetCLI
                 node1.AddPayload(2, b);
             }
             
-            Console.WriteLine($"Input == Output: {o.SequenceEqual(buffer)}");
-            return o;
+            // Console.WriteLine($"Input == Output: {o.SequenceEqual(buffer)}");
+            return null;
         }
     }
 }
