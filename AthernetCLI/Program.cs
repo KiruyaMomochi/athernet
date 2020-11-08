@@ -34,58 +34,45 @@ namespace AthernetCLI
             // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            DoTask();
-
-            // var node1 = new Mac(1, 100, 1, 1);
-            //
-            // var modulator = new DpskModulator(48000, 8000)
-            // {
-            //     BitDepth = 3
-            // };
-            // var fuck = new ReceiverRx(modulator, 3)
-            // {
-            //     Preamble = new WuPreambleBuilder(modulator.SampleRate, 0.015f).Build(),
-            //     PayloadBytes = 100
-            // };
-            // fuck.DataAvailable += (sender, eventArgs) => Console.WriteLine(eventArgs.Data);
-            // fuck.StartReceive();
-            // Task.Run(() =>
-            // {
-            //     for (int i = 0; i < 6250 / node1.PayloadBytes; i++)
-            //     {
-            //         node1.AddPayload(2, RandomByteBuilder(node1.PayloadBytes, i + 41));
-            //     }
-            // });
-            //
-            // Thread.Sleep(8000);
-            // fuck.StopReceive();
-            // Console.WriteLine("---Stopped!---");
-            // Thread.Sleep(2000);
+            var o = DoTask(@"C:\Users\xtyzw\OneDrive - shanghaitech.edu.cn\CS120_ComputerNetworks\Project\Project 2\INPUT.bin", 300);
+            var outFile = new FileInfo(@"C:\Users\xtyzw\OneDrive - shanghaitech.edu.cn\CS120_ComputerNetworks\Project\Project 2\OUTPUT.bin");
 
             watch.Stop();
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
 
-        private static void DoTask()
+        private static byte[] DoTask(string fileName, int payloadBytes = 500)
         {
-            var node1 = new Mac(1, 500, 1, 1);
-            var node2 = new Mac(2, 500, 3, 3);
-            Console.WriteLine(node1.AckTimeout);
-
+            var file = new FileInfo(fileName);
+            var o = new byte[6250];
+            var offset = 0;
+            
+            var node1 = new Mac(1, payloadBytes, 1, 1);
+            var node2 = new Mac(2, payloadBytes, 3, 3);
+            
             node1.StartReceive();
             node2.StartReceive();
-            node1.DataAvailable += (sender, eventArgs) => Console.WriteLine(eventArgs.Data[0]);
-            node2.DataAvailable += (sender, eventArgs) => Console.WriteLine(eventArgs.Data[0]);
-            
-            // for (int i = 0; i < 6250 / node1.PayloadBytes; i++)
-            // {
-            //     node1.AddPayload(2, RandomByteBuilder(node1.PayloadBytes, i + 41));
-            // }
-            for (int i = 0; i < 10; i++)
+
+            node2.DataAvailable += (sender, eventArgs) =>
             {
-                Console.WriteLine(node1.Ping(2));
-                Thread.Sleep(200);
+                var rem = 6250 - offset;
+                Buffer.BlockCopy(eventArgs.Data, 0, o, offset, Math.Min(rem, eventArgs.Data.Length));
+                offset += payloadBytes;
+            };
+
+            var buffer = new byte[6250];
+            file.OpenRead().Read(buffer);
+
+            for (int i = 0; i < buffer.Length; i += payloadBytes)
+            {
+                var s = buffer.Skip(i).Take(payloadBytes).ToArray();
+                var b = s.Concat(new byte[payloadBytes - s.Length]).ToArray();
+
+                node1.AddPayload(2, b);
             }
+            
+            Console.WriteLine($"Input == Output: {o.SequenceEqual(buffer)}");
+            return o;
         }
     }
 }

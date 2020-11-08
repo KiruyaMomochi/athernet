@@ -153,7 +153,8 @@ namespace Athernet.MacLayer
                 throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
 
             var frame = new MacFrame(dest, Address, MacType.Data, payload);
-
+            var failcnt = 0;
+            
             while (true)
             {
                 Backoff();
@@ -168,6 +169,10 @@ namespace Athernet.MacLayer
                 if (_ackEwh.WaitOne(AckTimeout))
                     return;
 
+                if (failcnt++ >= 5)
+                {
+                    throw new ApplicationException("Link error");
+                }
                 Trace.WriteLine($"M2{Address} ACK not received or ReTransmit. Retransmitting.");
             }
         }
@@ -204,7 +209,7 @@ namespace Athernet.MacLayer
         private BackoffHandler _backoff = new BackoffHandler();
         private static byte[] _zeroPayload = new byte[0];
 
-        public int AckTimeout => _physical.FrameSamples / 48 + 1000;
+        public int AckTimeout => _physical.FrameSamples / 48 + 600;
 
         private void SendPing(byte dest)
         {
