@@ -14,12 +14,12 @@ namespace Athernet.PhysicalLayer
     /// <summary>
     /// Receiver of the physical layer
     /// </summary>
-    public sealed class Receiver
+    public sealed class Receiver : IReceiver
     {
-        public int DeviceNumber { get; }
+        public int DeviceNumber { get; set; }
         public int PayloadBytes { get; set; }
         public float[] Preamble { get; set; } = new float[0];
-        public IModulator Modulator { get; set; }
+        public DpskModulator Modulator { get; set; }
         public ReceiveState State { get; private set; } = ReceiveState.Stopped;
 
         public int SampleRate => Modulator.SampleRate;
@@ -31,7 +31,7 @@ namespace Athernet.PhysicalLayer
 
         public event EventHandler PacketDetected;
 
-        public Receiver(IModulator modulator, int deviceNumber = 0)
+        public Receiver(DpskModulator modulator, int deviceNumber = 0)
         {
             Modulator = modulator;
             DeviceNumber = deviceNumber;
@@ -70,6 +70,7 @@ namespace Athernet.PhysicalLayer
         private static readonly DataflowLinkOptions LinkOptions = new DataflowLinkOptions {PropagateCompletion = true};
         private float[] _buffer = new float[0];
         
+        
         private void StartRecorder()
         {            
             Trace.WriteLine($"-R- Starting recorder.");
@@ -79,7 +80,7 @@ namespace Athernet.PhysicalLayer
             {
                 WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1),
                 DeviceNumber = DeviceNumber,
-                BufferMilliseconds = 50
+                BufferMilliseconds = 100
             };
             _recorder.DataAvailable += RecorderOnDataAvailable;
             _recorder.RecordingStopped += (s, e) => _demodulateSamples.Complete();
@@ -120,10 +121,10 @@ namespace Athernet.PhysicalLayer
 
         private void AddSamples(IEnumerable<float> samples)
         {
-            if (DeviceNumber == 3)
-            {
-                Console.WriteLine($"Rt{DeviceNumber} Channel free: {ChannelFree}\t{_channelPower}");
-            }
+            //if (DeviceNumber == 3)
+            //{
+            //    Trace.WriteLine($"Rt{DeviceNumber} Channel free: {ChannelFree}\t{_channelPower}");
+            //}
             // Trace.WriteLine($"Rx{DeviceNumber}: Channel Power {_channelPower}");
             _buffer = _buffer.Concat(samples).ToArray();
             // Athernet.Utils.Debug.WriteTempWav(_buffer.ToArray(), $"test_{_idx++}.wav");

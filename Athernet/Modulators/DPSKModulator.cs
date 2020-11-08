@@ -91,7 +91,11 @@ namespace Athernet.Modulators
 
             var carrier = new float[samples.Length];
             demodulateCarrier.Read(carrier, 0, carrier.Length);
-            GetFirstBit();
+            if (GetFirstBit())
+            {
+                Trace.WriteLine("DPK Return now.");
+                return new byte[0];
+            }
 
             for (var i = 0; i < frameBytes; i++)
             {
@@ -103,10 +107,10 @@ namespace Athernet.Modulators
 
             return bytes;
 
-
-            void GetFirstBit()
+            bool GetFirstBit()
             {
                 float sum = 0, sump1 = 0, sump2 = 0, summ = 0;
+
                 for (var k = 0; k < BitDepth; k++)
                 {
                     sum += samples[offset + nSample] * carrier[nSample];
@@ -117,9 +121,14 @@ namespace Athernet.Modulators
                     nSample++;
                 }
 
-                // var max = new []{sum, sump1, sump2, summ}.Max();
-                
                 Trace.WriteLine($"? | {sum}, {sump1}, {sump2}, {summ}");
+                if ((sum <= 0 && sump1 <= 0) || (sump1 <= 0 && summ <= 0) || (sum <= 0 && summ <= 0))
+                {
+                    return true;
+                }
+
+                // var max = new []{sum, sump1, sump2, summ}.Max();
+
                 // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (sump1 > sum)
                 {
@@ -146,6 +155,7 @@ namespace Athernet.Modulators
                 }
 
                 lastData = sum > 0;
+                return false;
             }
 
             bool GetNextBit()

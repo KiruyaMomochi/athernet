@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Athernet.Modulators;
 using Athernet.PhysicalLayer;
@@ -21,9 +22,9 @@ namespace Athernet.MacLayer
         public bool SendAck { get; set; } = true;
         public bool NeedAck { get; set; } = true;
 
-        public bool SendReTrans { get; set; } = true;
+        public bool SendReTrans { get; set; } = false;
 
-        
+
         public int PlayDeviceNumber
         {
             get => _physical.PlayDeviceNumber;
@@ -39,6 +40,10 @@ namespace Athernet.MacLayer
         private readonly EventWaitHandle _ackEwh = new EventWaitHandle(false, EventResetMode.AutoReset);
         private byte[] _ackFrame;
 
+        private readonly EventWaitHandle _pingEwh = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private bool _isPing = false;
+        private bool _isAck = false;
+        
         public event EventHandler PacketDetected
         {
             add => _physical.PacketDetected += value;
@@ -53,29 +58,60 @@ namespace Athernet.MacLayer
             _physical = physical;
             // _ackFrame = new byte[PayloadBytes];
             _physical.DataAvailable += PhysicalOnDataAvailable;
+            _physical.PacketDetected += (sender, args) =>
+            {
+                Trace.WriteLine($"Mp{Address} Set _pingEwh");
+                if (_isAck == true)
+                {
+                    _isAck = false;
+                    _ackEwh.Set();
+                }
+                else if (_isPing == false)
+                {
+                    SendPing(1);
+                }
+                else
+                {
+                    _pingEwh.Set();
+                }
+            };
         }
 
-        public Mac(byte address, int payloadBytes, IModulator modulator, int playDeviceNumber = 0, int recordDeviceNumber = 0) :
+        public Mac(byte address, int payloadBytes, DpskModulator modulator, int playDeviceNumber = 0,
+            int recordDeviceNumber = 0) :
             this(address, new Physical(payloadBytes + 3, modulator, playDeviceNumber, recordDeviceNumber)
-                {Preamble = new WuPreambleBuilder(modulator.SampleRate, 0.015f).Build()})
+            { Preamble = new WuPreambleBuilder(modulator.SampleRate, 0.015f).Build() })
         {
         }
 
-        public Mac(byte address, int payloadBytes, int playDeviceNumber = 0, int recordDeviceNumber = 0, int sampleRate = 48000) :
-            this(address, payloadBytes, new DpskModulator(sampleRate, 8000){BitDepth = 3}, playDeviceNumber, recordDeviceNumber)
+        public Mac(byte address, int payloadBytes, int playDeviceNumber = 0, int recordDeviceNumber = 0,
+            int sampleRate = 48000) :
+            this(address, payloadBytes, new DpskModulator(sampleRate, 8000) { BitDepth = 3 }, playDeviceNumber,
+                recordDeviceNumber)
         {
             Address = address;
         }
 
         private void PhysicalOnDataAvailable(object sender, PhysicalLayer.DataAvailableEventArgs e)
         {
-            var frame = MacFrame.Parse(e.Data);
+            if (e.Data.Length == 0)
+            {
+                // if (_isPing)
+                // {
+                //     // _pingEwh.Set();
+                // }
+                // else
+                //     SendPing(1);
             
-            Trace.WriteLine($"Mx{Address} [{frame.Type}] {frame.Dest} <- {frame.Src}: {frame.Payload[56]}.");
+                return;
+            }
+            var frame = MacFrame.Parse(e.Data);
+
+            Trace.WriteLine($"Mx{Address} [{frame.Type}] {frame.Dest} <- {frame.Src}.");
 
             if (frame.Dest != Address)
             {
-                 return;
+                return;
             }
 
             switch (frame.Type)
@@ -96,8 +132,14 @@ namespace Athernet.MacLayer
                 case MacType.Data when !e.CrcResult:
                     Console.WriteLine($"M2{Address} CRC failed.");
                     break;
-                case MacType.MacpingReq when e.CrcResult:
-                    throw new NotImplementedException();
+                case MacType.MacpingReq:
+                    Trace.WriteLine($"Mr{Address} Received MacPing req");
+                    _zeroPayload = new byte[0];
+                    AddData(frame.Src, frame.Dest, MacType.MacpingReply, _zeroPayload);
+                    break;
+                case MacType.MacpingReply:
+                    _pingEwh.Set();
+                    break;
                 case MacType.ReTrans when SendReTrans:
                     _ackFrame = frame.Frame;
                     _ackEwh.Set();
@@ -105,52 +147,98 @@ namespace Athernet.MacLayer
             }
         }
 
-        public void AddData(byte dest, byte[] payload)
+        public void AddPayload(byte dest, byte[] payload)
         {
             if (payload.Length != PayloadBytes)
                 throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
 
             var frame = new MacFrame(dest, Address, MacType.Data, payload);
-            
+
             while (true)
             {
-                Trace.WriteLine($"Mx{Address} [{frame.Type}] {frame.Src} -> {frame.Dest}: {frame.Payload[56]}.");
-                _physical.AddPayload(frame.Frame);
+                Backoff();
+                AddData(frame);
 
                 if (!NeedAck) return;
 
                 Trace.WriteLine($"M1. Waiting for ACK.");
-                if (_ackEwh.WaitOne(AckTimeout) && MacFrame.Parse(_ackFrame).Type == MacType.Ack)
-                {
+                // if (_ackEwh.WaitOne(AckTimeout) && MacFrame.Parse(_ackFrame).Type == MacType.Ack)
+                //     return;
+                _isAck = true;
+                if (_ackEwh.WaitOne(AckTimeout))
                     return;
-                }
 
-                Trace.WriteLine($"M2{Address} ACK not received. Retransmitting.");
+                Trace.WriteLine($"M2{Address} ACK not received or ReTransmit. Retransmitting.");
             }
         }
 
-        public int AckTimeout { get; set; } = 600;
+        private void Backoff()
+        {
+            while (!_physical.ChannelFree)
+            {
+                var waitTime = _backoff.Wait();
+                Console.WriteLine($"Mb{Address} Wait {waitTime} times");
+            }
+
+            _backoff.Reset();
+        }
+
+        private void AddData(MacFrame macFrame)
+        {
+            Trace.WriteLine(
+                $"Mx{Address} [{macFrame.Type}] {macFrame.Src} -> {macFrame.Dest}.");
+            AddData(macFrame.Frame);
+        }
+
+        private void AddData(byte dest, byte src, MacType ack, Span<byte> payload) =>
+            AddData(new MacFrame(dest, src, ack, payload));
+
+        private void AddData(byte dest, byte src, MacType ack, byte[] payload) =>
+            AddData(new MacFrame(dest, src, ack, payload));
+
+        private void AddData(byte[] macFrame)
+        {
+            _physical.AddPayload(macFrame);
+        }
+
+        private BackoffHandler _backoff = new BackoffHandler();
+        private static byte[] _zeroPayload = new byte[0];
+
+        public int AckTimeout => _physical.FrameSamples / 48 + 1000;
+
+        private void SendPing(byte dest)
+        {
+            _physical.SendPing();
+        }
+
+        public TimeSpan Ping(byte dest)
+        {
+            var before = DateTime.Now;
+            _isPing = true;
+            SendPing(dest);
+            _pingEwh.WaitOne();
+            // _isPing = false;
+            var after = DateTime.Now;
+            return after - before;
+        }
 
         private void ReplyWithAck(in MacFrame frame)
         {
-            var ackFrame = new MacFrame(frame.Src, frame.Dest, MacType.Ack, frame.Payload);
-            Trace.WriteLine($"Mx{Address} [{ackFrame.Type}] {ackFrame.Src} -> {ackFrame.Dest}: {ackFrame.Payload[56]}.");
-            _physical.AddPayload(ackFrame.Frame);
+            Backoff();
+            // AddData(frame.Src, frame.Dest, MacType.Ack, frame.Payload);
+            SendPing(1);
         }
-        
+
         private void ReplyWithReTrans(in MacFrame frame)
         {
-            var reTransFrame = new MacFrame(frame.Src, frame.Dest, MacType.ReTrans, frame.Payload);
-            Trace.WriteLine($"Mx{Address} [{reTransFrame.Type}] {reTransFrame.Src} -> {reTransFrame.Dest}: {reTransFrame.Payload[56]}.");
-            _physical.AddPayload(reTransFrame.Frame);
+            Backoff();
+            AddData(frame.Src, frame.Dest, MacType.ReTrans, frame.Payload);
         }
 
         public void StartReceive() => _physical.StartReceive();
         public void StopReceive() => _physical.StopReceive();
 
-        private void OnDataAvailable(byte[] data)
-        {
+        private void OnDataAvailable(byte[] data) =>
             DataAvailable?.Invoke(this, new DataAvailableEventArgs() {Data = data});
-        }
     }
 }

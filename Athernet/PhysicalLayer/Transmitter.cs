@@ -20,7 +20,7 @@ namespace Athernet.PhysicalLayer
 
         public float[] Preamble { get; set; } = new float[0];
 
-        public IModulator Modulator { get; set; }
+        public DpskModulator Modulator { get; set; }
 
         public TransmitState State { get; private set; } = TransmitState.Idle;
 
@@ -38,7 +38,7 @@ namespace Athernet.PhysicalLayer
         /// </summary>
         public event EventHandler<StoppedEventArgs> PlayComplete;
 
-        public Transmitter(IModulator modulator, int deviceNumber = 0,int bufferLength = 19200000)
+        public Transmitter(DpskModulator modulator, int deviceNumber = 0, int bufferLength = 19200000)
         {
             Modulator = modulator;
             _provider = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, 1))
@@ -127,7 +127,7 @@ namespace Athernet.PhysicalLayer
             {
                 throw new NotImplementedException();
             }
-
+            
             _provider.AddSamples(byteFrame, 0, byteFrame.Length);
             _wo.Play();
         }
@@ -146,6 +146,18 @@ namespace Athernet.PhysicalLayer
         {
             State = TransmitState.Idle;
             PlayComplete?.Invoke(this, e);
+        }
+
+        private static readonly byte[] Noise = new byte[]
+            {252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252};
+
+        private static float[] NoiseSamples = null;
+
+        public void SendPing()
+        {
+            NoiseSamples ??= 
+                NoiseSamples = Modulator.Modulate(Noise, false);
+            AddSamples(NoiseSamples);
         }
     }
 }

@@ -11,7 +11,11 @@ Project("{C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5}") = "AthernetGUI (Package)", "At
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AthernetGUI", "AthernetGUI\AthernetGUI\AthernetGUI.csproj", "{000CFACB-E2EE-4DF6-ADA4-6358345F1357}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AthernetTest", "AthernetTest\AthernetTest.csproj", "{4463041C-1D12-4943-AB37-AE14C06553AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AthernetTest", "AthernetTest\AthernetTest.csproj", "{4463041C-1D12-4943-AB37-AE14C06553AC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WavPlayer", "WavPlayer\WavPlayer.csproj", "{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacPerf", "MacPerf\MacPerf.csproj", "{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -87,6 +91,30 @@ Global
 		{4463041C-1D12-4943-AB37-AE14C06553AC}.Release|x64.Build.0 = Release|Any CPU
 		{4463041C-1D12-4943-AB37-AE14C06553AC}.Release|x86.ActiveCfg = Release|Any CPU
 		{4463041C-1D12-4943-AB37-AE14C06553AC}.Release|x86.Build.0 = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|x64.Build.0 = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Debug|x86.Build.0 = Debug|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|x64.ActiveCfg = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|x64.Build.0 = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|x86.ActiveCfg = Release|Any CPU
+		{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}.Release|x86.Build.0 = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|x64.Build.0 = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Debug|x86.Build.0 = Debug|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|x64.ActiveCfg = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|x64.Build.0 = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|x86.ActiveCfg = Release|Any CPU
+		{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -10,7 +10,7 @@ namespace Athernet.PhysicalLayer
     /// </summary>
     public sealed class Physical
     {
-        private readonly Receiver _receiver;
+        private readonly IReceiver _receiver;
         private readonly Transmitter _transmitter;
 
         /// <summary>
@@ -44,11 +44,13 @@ namespace Athernet.PhysicalLayer
         /// <summary>
         /// The modulator that should be used for modulation and demodulation.
         /// </summary>
-        private IModulator Modulator
+        internal DpskModulator Modulator
         {
             get => _receiver.Modulator; 
             set => _receiver.Modulator = _transmitter.Modulator = value;
         }
+
+        internal int FrameSamples => Modulator.FrameSamples(PayloadBytes + 4) + Preamble.Length;
 
         /// <summary>
         /// The length of payload in bytes.
@@ -124,10 +126,10 @@ namespace Athernet.PhysicalLayer
         /// <param name="modulator">The modulator to use with.</param>
         /// <param name="playDeviceNumber">The device number of player.</param>
         /// <param name="recordDeviceNumber">The device number of recorder.</param>
-        public Physical(int payloadBytes, IModulator modulator, int playDeviceNumber = 0, int recordDeviceNumber = 0)
+        public Physical(int payloadBytes, DpskModulator modulator, int playDeviceNumber = 0, int recordDeviceNumber = 0)
         {
             _transmitter = new Transmitter(modulator, playDeviceNumber);
-            _receiver = new Receiver(modulator, recordDeviceNumber);
+            _receiver = new ReceiverRx(modulator, recordDeviceNumber);
             PayloadBytes = payloadBytes;
         }
         
@@ -163,5 +165,10 @@ namespace Athernet.PhysicalLayer
         public void StopReceive() => _receiver.StopReceive();
 
         internal bool ChannelFree => _receiver.ChannelFree;
+
+        public void SendPing()
+        {
+            _transmitter.SendPing();
+        }
     }
 }

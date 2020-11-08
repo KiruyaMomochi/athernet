@@ -134,22 +134,80 @@ namespace Athernet.Utils
                 Console.WriteLine(BitConverter.ToString(buffer));
             }
         }
+        private static Random random = new Random();
+
+        public static byte[] GeneratePayload(int payloadBytes)
+        {
+            var ret = new byte[payloadBytes]; 
+            random.NextBytes(ret);
+            return ret;
+        }
     }
 
     public static class Audio
     {
-        public static IEnumerable<float> ToFloatBuffer(in byte[] buffer, in int bytesRecorded, in int bitsPerSample)
+        public static float[] ToFloatBuffer(in byte[] buffer, in int bytesRecorded, in int bitsPerSample)
         {
             var wave = new WaveBuffer(buffer);
-                
-            var floatBuffer = bitsPerSample switch
+                        
+            switch (bitsPerSample)
             {
-                16 => wave.ShortBuffer.Take(bytesRecorded / 2).Select(x => (float) x),
-                32 => wave.FloatBuffer.Take(bytesRecorded / 4),
-                _ => throw new NotImplementedException(),
-            };
+                case 32:
+                {
+                    var ret = new float[bytesRecorded / 4];
+                    Buffer.BlockCopy(buffer, 0, ret, 0, bytesRecorded);
+                    return ret;
+                }
+                case 16:
+                    return wave.ShortBuffer.Take(bytesRecorded / 2).Select(x => (float) x).ToArray();
+                default:
+                    throw new NotImplementedException();
+            }
+        }
 
-            return floatBuffer;
+        public static void ListDevices()
+        {
+            for (int i = -1; i < WaveIn.DeviceCount; i++)
+            {
+                var caps = WaveIn.GetCapabilities(i);
+                Console.WriteLine($"WaveIn device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
+            }
+
+            Console.WriteLine();
+
+            for (int i = -1; i < WaveOut.DeviceCount; i++)
+            {
+                var caps = WaveOut.GetCapabilities(i);
+                Console.WriteLine($"WaveOut device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
+            }
+        }
+
+        public static int? GetInDeviceNumber(string Name)
+        {
+            for (int i = 0; i < WaveIn.DeviceCount; i++)
+            {
+                var caps = WaveIn.GetCapabilities(i);
+                if (caps.ProductName.Contains(Name))
+                {
+                    return i;
+                }
+            }
+
+            return null;
+        }
+
+        public static int? GetOutDeviceNumber(string Name)
+        {
+            for (int i = 0; i < WaveOut.DeviceCount; i++)
+            {
+                var caps = WaveOut.GetCapabilities(i);
+                if (caps.ProductName.Contains(Name))
+                {
+                    return i;
+                }
+            }
+
+            return null;
         }
     }
 

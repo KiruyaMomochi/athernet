@@ -22,7 +22,9 @@ namespace Athernet.Modulators
             // Do nothing
         }
 
-        public override float[] Modulate(byte[] bytes)
+        public override float[] Modulate(byte[] bytes) => Modulate(bytes, true);
+
+        public float[] Modulate(byte[] bytes, bool firstBit)
         {
             Trace.WriteLine($"P2. Modulate using {this.GetType().Name}.");
             
@@ -31,7 +33,13 @@ namespace Athernet.Modulators
             var nSample = 0;
             var modulateCarrier = NewSineSignal();
 
+
+            if (firstBit)
+                Zero(modulateCarrier);
+            else
+                One(modulateCarrier);
             nSample += modulateCarrier.Read(samples, nSample, BitDepth);
+            
             foreach (bool bit in Utils.Maths.ToBits(bytes, Maths.Endianness.LittleEndian))
             {
                 if (bit)
