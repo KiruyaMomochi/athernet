@@ -61,7 +61,7 @@ namespace Athernet.MacLayer
             _physical.PacketDetected += (sender, args) =>
             {
                 Trace.WriteLine($"Mp{Address} Set _pingEwh");
-                if (_isAck == true)
+                if (_isAck)
                 {
                     _isAck = false;
                     _ackEwh.Set();
@@ -216,15 +216,20 @@ namespace Athernet.MacLayer
             _physical.SendPing();
         }
 
-        public TimeSpan Ping(byte dest)
+        public TimeSpan? Ping(byte dest)
         {
             var before = DateTime.Now;
             _isPing = true;
             SendPing(dest);
-            _pingEwh.WaitOne();
-            // _isPing = false;
-            var after = DateTime.Now;
-            return after - before;
+
+            if (_pingEwh.WaitOne(1000))
+            {
+                // _isPing = false;
+                var after = DateTime.Now;
+                return after - before;
+            }
+
+            return null;
         }
 
         private void ReplyWithAck(in MacFrame frame)
