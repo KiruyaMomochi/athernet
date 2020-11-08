@@ -12,21 +12,23 @@ namespace MacPerf
 
         static void Main(string[] args)
         {
+            // Console.ReadLine();
             Athernet.Utils.Audio.ListDevices();
             int payloadBytes = 200;
 
-            var node1 = new Mac(1, payloadBytes, 1, 1);
-            var node2 = new Mac(2, payloadBytes, 3, 3);
+            // var node1 = new Mac(1, payloadBytes, 1, 1);
+            var node2 = new Mac(2, payloadBytes, 2, 2);
 
-            node1.StartReceive();
+            // node1.StartReceive();
             node2.StartReceive();
-            var ping = Task.Run(() => MacPing(node1, 2));
+            // var ping = Task.Run(() => MacPing(node1, 2));
             // var perf1 = Task.Run(() => MacPerf(node1, 2, payloadBytes));
-            var perf2 = Task.Run(() => MacPerf(node2, 1, payloadBytes));
+            // var perf2 = Task.Run(() => MacPerf(node2, 1, payloadBytes));
             // Task.WaitAll(perf1, perf2);
-            Task.WaitAll(ping, perf2);
+            // Task.WaitAll(ping, perf2);
+            MacPerf(node2, 1, payloadBytes);
         }
-
+        
         private static void MacPerf(Mac node, byte dest, int payloadBytes)
         {
             Task.Run(() => AddRandomPayload(node, dest, payloadBytes));
