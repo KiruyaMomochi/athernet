@@ -36,7 +36,7 @@ namespace Athernet.Modulators
 
         public abstract byte[] Demodulate(float[] frame, int frameBytes);
 
-        protected virtual SineGenerator NewSineSignal()
+        internal virtual SineGenerator NewSineSignal()
             => new SineGenerator(SampleRate, 1)
             {
                 Frequency = Frequency[0],

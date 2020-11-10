@@ -148,6 +148,7 @@ namespace Athernet.Utils
     {
         public static float[] ToFloatBuffer(in byte[] buffer, in int bytesRecorded, in int bitsPerSample)
         {
+            // Console.WriteLine(bytesRecorded);
             var wave = new WaveBuffer(buffer);
                         
             switch (bitsPerSample)
@@ -167,19 +168,20 @@ namespace Athernet.Utils
 
         public static void ListDevices()
         {
+            for (int i = -1; i < WaveOut.DeviceCount; i++)
+            {
+                var caps = WaveOut.GetCapabilities(i);
+                Console.WriteLine($"WaveOut device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
+            }
+
+            Console.WriteLine();
+
             for (int i = -1; i < WaveIn.DeviceCount; i++)
             {
                 var caps = WaveIn.GetCapabilities(i);
                 Console.WriteLine($"WaveIn device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
             }
 
-            Console.WriteLine();
-
-            for (int i = -1; i < WaveOut.DeviceCount; i++)
-            {
-                var caps = WaveOut.GetCapabilities(i);
-                Console.WriteLine($"WaveOut device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
-            }
         }
 
         public static int? GetInDeviceNumber(string Name)
@@ -213,6 +215,14 @@ namespace Athernet.Utils
 
     public static class Debug
     {
+        public static DateTime Time;
+
+        public static TimeSpan UpdateTimeSpan()
+        {
+            var oldTime = Time;
+            Time = DateTime.Now;
+            return Time - oldTime;
+        }
         public static void WriteTempCsv(float[] buffer, string fileName)
         {
             var path = Path.Combine(Path.GetTempPath(), fileName);

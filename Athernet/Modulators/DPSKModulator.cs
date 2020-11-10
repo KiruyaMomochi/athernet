@@ -3,7 +3,14 @@ using NWaves.Signals;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Threading;
+using System.Threading.Tasks;
+using Athernet.Utils;
 
 namespace Athernet.Modulators
 {
@@ -22,17 +29,18 @@ namespace Athernet.Modulators
         public override byte[] Demodulate(float[] samples, int frameBytes)
         {
             Trace.WriteLine($"R3. Demodulate using {this.GetType().Name}.");
-
-            // Athernet.Utils.Debug.PlaySamples(samples);
             var demodulateCarrier = NewSineSignal();
-
             samples = ApplyFiltersBeforeMultiply(samples);
-            // demodulateCarrier.Reset();
-            // var sums = CalcSum(samples, frameBits, demodulateCarrier);
-
-            // sums = ApplyFiltersAfterMultiply(sums);
-
             return CalcFrame(samples, demodulateCarrier, frameBytes);
+        }
+
+        public byte[] DemodulateRx(List<float> li)
+        {
+            Trace.WriteLine($"R3. Demodulate using {this.GetType().Name}.");
+
+            // Read the head
+            
+            return new byte[0];
         }
 
         private float FindPhase(in float[] signal, SineGenerator carrier)

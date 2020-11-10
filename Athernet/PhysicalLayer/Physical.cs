@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Athernet.Modulators;
+using Athernet.Utils;
 using NAudio.Wave;
 
 namespace Athernet.PhysicalLayer
@@ -144,6 +145,7 @@ namespace Athernet.PhysicalLayer
             {
                 throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
             }
+            Debug.UpdateTimeSpan();
             _transmitter.AddPayload(payload);
         }
         

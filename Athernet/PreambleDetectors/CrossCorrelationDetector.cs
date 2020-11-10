@@ -77,7 +77,7 @@ namespace Athernet.Preambles.PreambleDetectors
             {
                 localPower = localPower * 63 / 64 + _output[i] * _output[i] / 64;
 
-                if (_output[i] < localMaximum || _output[i] < 100)
+                if (_output[i] < localMaximum || _output[i] < 110)
                     continue;
                 if (_output[i] * 3 > localPower)
                 {
@@ -103,7 +103,7 @@ namespace Athernet.Preambles.PreambleDetectors
         /// </summary>
         /// <param name="samples">The samples to detect</param>
         /// <returns>The position of local maximum if the preamble is found, otherwise -1.</returns>
-        public int Detect(float[] samples)
+        public int Detect(in float[] samples)
         {
             var offset = 0;
 
