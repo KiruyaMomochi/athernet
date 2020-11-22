@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
@@ -76,6 +77,7 @@ namespace Athernet.PhysicalLayer
         //     Task.Run(() => _channelPower = floatBuffer.TakeLast(100).Select(x => x * x).Average());
         // }
 
+        // TODO: CSMA
         private float _channelPower;
         public bool ChannelFree => _channelPower < 0.02;
         private CrossCorrelationDetector _detector;
@@ -109,10 +111,12 @@ namespace Athernet.PhysicalLayer
                         _recorder.WaveFormat.BitsPerSample))
                 .SelectMany(x => x)
                 .Window(WindowSize, Preamble.Length)
-                .SubscribeOn(ThreadPoolScheduler.Instance)
+                .SubscribeOn(TaskPoolScheduler.Default)
                 .Select(SkipToPreamble)
-                .Merge()
-                .Subscribe(Console.WriteLine);
+                // .Subscribe(x => x.Subscribe(y => Console.Write("!"), () => { Console.Write(".");}));
+                // .Merge()
+                .Subscribe(x => x.Subscribe(_ => Console.Write("."), _ => Console.Write("E"), () => Console.Write("C")));
+                // .Subscribe(_ => Console.Write("."));
         }
 
         private float[] SkipToPreamble(IList<float> observable)
@@ -121,17 +125,20 @@ namespace Athernet.PhysicalLayer
             return arr == -1 ? null : observable.Skip(arr).Take(FrameSamples).ToArray();
         }
 
-        private IObservable<IObservable<byte>> SkipToPreamble(IObservable<float> observable)
+        private IObservable<byte> SkipToPreamble(IObservable<float> observable)
         {
             var ret = observable.Publish().RefCount();
             var samples = ret.Take(2 * Preamble.Length + _detector.WindowSize)
                 .ToArray()
                 .Select(x => _detector.Detect(x))
                 .Where(pos => pos != -1)
-                .Select(pos => ret.Skip(pos));
-            // .Merge();
-            // .ObserveOn(ThreadPoolScheduler.Instance)
-            return ToList(samples, PayloadBytes + 4);
+                .Select(pos => ret.Skip(pos))
+                .Select(x => new PskCore(x){BitDepth = Modulator.BitDepth}.Payload)
+                .Merge();
+            // var core = new PskCore(samples);
+            // return core.Payload;
+            // return samples;
+            return samples;
         }
 
         private IObservable<IObservable<byte>> ToList(IObservable<IObservable<float>> samples, int maxFrameBytes)
