@@ -125,7 +125,7 @@ namespace Athernet.PhysicalLayer
 
             if (Channel != Channel.Mono)
             {
-                throw new NotImplementedException();
+                throw new ArgumentOutOfRangeException();
             }
             
             _provider.AddSamples(byteFrame, 0, byteFrame.Length);

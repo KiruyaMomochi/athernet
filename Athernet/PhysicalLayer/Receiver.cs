@@ -146,7 +146,7 @@ namespace Athernet.PhysicalLayer
                     case ReceiveState.Stopped:
                         break;
                     default:
-                        throw new NotImplementedException();
+                        throw new ArgumentOutOfRangeException();
                 }
             }
         }

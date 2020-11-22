@@ -20,7 +20,7 @@ namespace Athernet.Utils
             {
                 '0' => false,
                 '1' => true,
-                _ => throw new NotImplementedException(),
+                _ => throw new ArgumentOutOfRangeException(),
             });
             return new BitArray(arr.ToArray());
         }
@@ -58,7 +58,7 @@ namespace Athernet.Utils
             {
                 Endianness.LittleEndian => LittleByteMask,
                 Endianness.BigEndian => BigByteMask,
-                _ => throw new NotImplementedException()
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             foreach (var b in bytes)
@@ -79,7 +79,7 @@ namespace Athernet.Utils
             {
                 Endianness.LittleEndian => LittleByteMask,
                 Endianness.BigEndian => BigByteMask,
-                _ => throw new NotImplementedException()
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             byte b = 0;
@@ -162,7 +162,7 @@ namespace Athernet.Utils
                 case 16:
                     return wave.ShortBuffer.Take(bytesRecorded / 2).Select(x => (float) x).ToArray();
                 default:
-                    throw new NotImplementedException();
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -264,7 +264,7 @@ namespace Athernet.Utils
                 {
                     true => "\nT",
                     false => "F",
-                    _ => throw new NotImplementedException()
+                    _ => throw new ArgumentOutOfRangeException()
                 } + " ");
             }
 
