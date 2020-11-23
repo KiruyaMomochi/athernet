@@ -11,32 +11,29 @@ namespace Athernet.Modulators
     public class PskCore
     {
         public int BitDepth { get; init; }
-        public ISubject<byte> Payload => _payload;
+        public ISubject<byte> Payload { get; }
 
-        private ISubject<byte> _payload;
-        private readonly IObservable<float> _source;
-        private List<float> _samples;
+        private readonly List<float> _samples;
 
         private int _processing = 0;
 
         // TODO: Assign _carrier
-        private float[] _carrier;
+        private readonly float[] _carrier;
 
         private bool _complete;
 
         private int _carrierOffset;
-        private int _carrierLength;
+        private readonly int _carrierLength;
         
         public PskCore(IObservable<float> source, SineGenerator sampleProvider, int carrierLength = 18000)
         {
             Console.Write("+");
-            _source = source;
-            
+
             // TODO: Give it a initial size.
             _samples = new List<float>();
             // TODO: Give it a buffer size.
-            _payload = new ReplaySubject<byte>();
-            _source.Subscribe(OnNextSample, OnError, OnComplete);
+            Payload = new ReplaySubject<byte>();
+            source.Subscribe(OnNextSample, OnError, OnComplete);
 
             _carrierLength = carrierLength;
             _carrier = new float[_carrierLength];
@@ -47,7 +44,7 @@ namespace Athernet.Modulators
         private void OnError(Exception obj)
         {
             Console.WriteLine("OnError");
-            _payload.OnError(obj);
+            Payload.OnError(obj);
         }
 
         private void OnComplete()
@@ -57,7 +54,7 @@ namespace Athernet.Modulators
                 return;;
 
             _complete = true;
-            _payload.OnCompleted();
+            Payload.OnCompleted();
         }
 
         private void OnNextSample(float sample)
@@ -113,7 +110,7 @@ namespace Athernet.Modulators
                 return;
             
             // if _nBit == 8
-            _payload.OnNext(_byte);
+            Payload.OnNext(_byte);
             _nBit = 0;
             _byte = 0;
         }
