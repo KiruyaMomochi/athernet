@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Threading;
+using NAudio.Wave;
 
 namespace Athernet.Modulators
 {
@@ -22,14 +23,17 @@ namespace Athernet.Modulators
 
         private bool _complete;
         
-        public PskCore(IObservable<float> source)
+        public PskCore(IObservable<float> source, ISampleProvider sampleProvider)
         {
+            Console.Write("+");
             _source = source;
             // TODO: Give it a initial size.
             _samples = new List<float>();
             // TODO: Give it a buffer size.
             _payload = new ReplaySubject<byte>();
             _source.Subscribe(OnNextSample, OnError, OnComplete);
+            _carrier = new float[36151];
+            sampleProvider.Read(_carrier, 0, 36151);
         }
 
         private void OnError(Exception obj)
@@ -65,27 +69,22 @@ namespace Athernet.Modulators
 
         private void Process()
         {
-            Console.WriteLine("Process");
             if (Interlocked.Exchange(ref _processing, 1) != 0)
                 return;
 
             try
             {
-                if (_listCnt < BitDepth)
-                {
-                    return;
-                }
-                
                 while (!_complete)
                 {
                     // Do nothing if there is no new bit we can process.
-                    if (_listCnt - _offset < BitDepth + 1)
+                    if (_listCnt < _nSample + BitDepth + _offset + 2)
                         return;
 
                     // If it is the first bit, we check offset 0, 1, 2 and 3
                     // Adjust parameter?
-                    var sum = _firstBit ? AdjustSum(0, 3) : AdjustSum(-1, 1);
-
+                    var sum = _firstBit ? AdjustSum(0, 2) : AdjustSum(-1, 1);
+                    _firstBit = false;
+                    
                     if (sum > 0)
                         _byte |= (byte)(1 << _nBit);
                     AdvanceBit();
@@ -121,7 +120,7 @@ namespace Athernet.Modulators
                 var sum = 0f;
                 for (int i = 0; i < BitDepth; i++)
                     sum += _samples[_nSample + _offset + offset + i] * _carrier[_nSample + i];
-                if (!Compare(sum, localMaximum))
+                if (!Compare(localMaximum, sum))
                     continue;
 
                 localMaximum = sum;

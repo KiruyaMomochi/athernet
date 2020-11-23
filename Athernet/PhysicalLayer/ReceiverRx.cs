@@ -114,9 +114,9 @@ namespace Athernet.PhysicalLayer
                 .SubscribeOn(TaskPoolScheduler.Default)
                 .Select(SkipToPreamble)
                 // .Subscribe(x => x.Subscribe(y => Console.Write("!"), () => { Console.Write(".");}));
-                // .Merge()
-                .Subscribe(x => x.Subscribe(_ => Console.Write("."), _ => Console.Write("E"), () => Console.Write("C")));
-                // .Subscribe(_ => Console.Write("."));
+                .Merge()
+                // .Subscribe(x => x.Subscribe(_ => Console.Write("."), _ => Console.Write("E"), () => Console.Write("C")));
+                .Subscribe(_ => Console.Write("."));
         }
 
         private float[] SkipToPreamble(IList<float> observable)
@@ -133,7 +133,7 @@ namespace Athernet.PhysicalLayer
                 .Select(x => _detector.Detect(x))
                 .Where(pos => pos != -1)
                 .Select(pos => ret.Skip(pos))
-                .Select(x => new PskCore(x){BitDepth = Modulator.BitDepth}.Payload)
+                .Select(x => new PskCore(x, Modulator.NewSineSignal()){BitDepth = Modulator.BitDepth}.Payload)
                 .Merge();
             // var core = new PskCore(samples);
             // return core.Payload;
