@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Threading;
+using Athernet.SampleProviders;
 using NAudio.Wave;
 
 namespace Athernet.Modulators
@@ -22,18 +23,25 @@ namespace Athernet.Modulators
         private float[] _carrier;
 
         private bool _complete;
+
+        private int _carrierOffset;
+        private int _carrierLength;
         
-        public PskCore(IObservable<float> source, ISampleProvider sampleProvider)
+        public PskCore(IObservable<float> source, SineGenerator sampleProvider, int carrierLength = 18000)
         {
             Console.Write("+");
             _source = source;
+            
             // TODO: Give it a initial size.
             _samples = new List<float>();
             // TODO: Give it a buffer size.
             _payload = new ReplaySubject<byte>();
             _source.Subscribe(OnNextSample, OnError, OnComplete);
-            _carrier = new float[36151];
-            sampleProvider.Read(_carrier, 0, 36151);
+
+            _carrierLength = carrierLength;
+            _carrier = new float[_carrierLength];
+            _sampleProvider = sampleProvider;
+            _sampleProvider.Read(_carrier, 0, _carrierLength);
         }
 
         private void OnError(Exception obj)
@@ -66,6 +74,7 @@ namespace Athernet.Modulators
 
         private byte _byte;
         private int _nBit;
+        private readonly SineGenerator _sampleProvider;
 
         private void Process()
         {
@@ -88,6 +97,7 @@ namespace Athernet.Modulators
                     if (sum > 0)
                         _byte |= (byte)(1 << _nBit);
                     AdvanceBit();
+                    CheckCarrier();
                 }
             }
             finally
@@ -108,6 +118,17 @@ namespace Athernet.Modulators
             _byte = 0;
         }
 
+        private void CheckCarrier()
+        {
+            if (_nSample - _carrierOffset + BitDepth + 3 < _carrierLength)
+                return;
+            
+            var remainSampleLength = _carrierLength - (_nSample - _carrierOffset);
+            _sampleProvider.SeekBack((uint)remainSampleLength);
+            _sampleProvider.Read(_carrier, 0, _carrierLength);
+            _carrierOffset = _nSample;
+        }
+        
         private float AdjustSum(int minOffset, int maxOffset)
         {
             var localMaximum = 0f;
@@ -119,7 +140,7 @@ namespace Athernet.Modulators
             {
                 var sum = 0f;
                 for (int i = 0; i < BitDepth; i++)
-                    sum += _samples[_nSample + _offset + offset + i] * _carrier[_nSample + i];
+                    sum += _samples[_nSample + _offset + offset + i] * _carrier[_nSample - _carrierOffset + i];
                 if (!Compare(localMaximum, sum))
                     continue;
 
