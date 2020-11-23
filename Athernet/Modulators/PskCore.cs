@@ -17,7 +17,6 @@ namespace Athernet.Modulators
 
         private int _processing = 0;
 
-        // TODO: Assign _carrier
         private readonly float[] _carrier;
 
         private bool _complete;
