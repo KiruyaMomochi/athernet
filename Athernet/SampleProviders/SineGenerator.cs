@@ -22,34 +22,54 @@ namespace Athernet.SampleProviders
         }
 
         private const double TwoPi = 2 * Math.PI;
-        private int nSample = 0;
+        private uint _nSample = 0;
 
         public int Read(float[] buffer, int offset, int count)
         {
             // Generator current value
-            double multiple;
-            double sampleValue;
             int outIndex = offset;
 
             // Complete Buffer
             for (int sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
             {
-                multiple = TwoPi * Frequency / WaveFormat.SampleRate;
-                sampleValue = Gain * Math.Sin(nSample * multiple + PhaseShift);
-                buffer[outIndex++] = (float)sampleValue;
-                nSample++;
+                var multiple = TwoPi * Frequency / WaveFormat.SampleRate;
+                var sampleValue = Gain * Math.Sin(_nSample * multiple + PhaseShift);
+                for (int i = 0; i < WaveFormat.Channels; i++) 
+                    buffer[outIndex++] = (float) sampleValue;
+                _nSample++;
             }
             return count;
         }
 
+        public int Peek(float[] buffer, int offset, int count)
+        {
+            // Generator current value
+            int outIndex = offset;
+
+            // Complete Buffer
+            for (int sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
+            {
+                var multiple = TwoPi * Frequency / WaveFormat.SampleRate;
+                var sampleValue = Gain * Math.Sin((_nSample + sampleCount) * multiple + PhaseShift);
+                for (int i = 0; i < WaveFormat.Channels; i++) 
+                    buffer[outIndex++] = (float) sampleValue;
+            }
+            return count;
+        }
+
+        public void SeekBack(uint offset)
+        {
+            _nSample -= offset;
+        }
+
         public void Reset()
         {
-            nSample = 0;
+            _nSample = 0;
         }
 
         public void Reset(double phaseShift)
         {
-            nSample = 0;
+            _nSample = 0;
             PhaseShift = phaseShift;
         }
     }
