@@ -12,16 +12,16 @@ namespace Athernet.MacLayer
 
         public MacType Type
         {
-            get => (MacType) Frame[2];
-            set => Frame[2] = (byte) value;
+            get => (MacType)Frame[2];
+            set => Frame[2] = (byte)value;
         }
-        
+
         public readonly Span<byte> Payload;
 
         public MacFrame(byte[] frame)
         {
             Frame = frame;
-            Payload = new Span<byte>(Frame).Slice(3);
+            Payload = new Span<byte>(Frame, 3, Frame.Length - 3);
         }
 
         public MacFrame(byte dest, byte src, MacType type, byte[] payload) : this()
@@ -30,11 +30,10 @@ namespace Athernet.MacLayer
             Dest = dest;
             Src = src;
             Type = type;
-            Payload = new Span<byte>(Frame).Slice(3);
+            Payload = new Span<byte>(Frame, 3, Frame.Length - 3);
             Buffer.BlockCopy(payload, 0, Frame, 3, payload.Length);
         }
-        
-        
+
         public MacFrame(byte dest, byte src, MacType type, Span<byte> payload) : this()
         {
             Frame = new byte[payload.Length + 3];
@@ -45,7 +44,7 @@ namespace Athernet.MacLayer
             payload.CopyTo(Payload);
         }
 
-    public static MacFrame Parse(byte[] frame)
+        public static MacFrame Parse(byte[] frame)
         {
             return new MacFrame(frame);
         }
