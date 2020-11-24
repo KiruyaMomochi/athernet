@@ -35,7 +35,7 @@ namespace Athernet.Utils
             {
                 var tsWritten = 0;
                 // write to end
-                int writeToEnd = Math.Min(_buffer.Length - _writePosition, count);
+                var writeToEnd = Math.Min(_buffer.Length - _writePosition, count);
                 Array.Copy(data, offset, _buffer, _writePosition, writeToEnd);
                 _writePosition += writeToEnd;
                 _writePosition %= _buffer.Length;
@@ -72,8 +72,8 @@ namespace Athernet.Utils
         {
             lock (_lockObject)
             {
-                int tsRead = 0;
-                int readToEnd = Math.Min(_buffer.Length - _readPosition, count);
+                var tsRead = 0;
+                var readToEnd = Math.Min(_buffer.Length - _readPosition, count);
                 Array.Copy(_buffer, _readPosition, data, offset, readToEnd);
                 tsRead += readToEnd;
                 _readPosition += readToEnd;
@@ -110,9 +110,9 @@ namespace Athernet.Utils
         {
             lock (_lockObject)
             {
-                int readPosition = _readPosition;
-                int tsRead = 0;
-                int readToEnd = Math.Min(_buffer.Length - readPosition, count);
+                var readPosition = _readPosition;
+                var tsRead = 0;
+                var readToEnd = Math.Min(_buffer.Length - readPosition, count);
                 Array.Copy(_buffer, readPosition, data, offset, readToEnd);
                 tsRead += readToEnd;
                 readPosition += readToEnd;

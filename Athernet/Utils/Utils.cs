@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Athernet.SampleProvider;
 using NAudio.Wave;
 
 namespace Athernet.Utils
@@ -107,6 +108,17 @@ namespace Athernet.Utils
 
         public static readonly byte[] LittleByteMask = {1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7};
         public static readonly byte[] BigByteMask = {1 << 7, 1 << 6, 1 << 5, 1 << 4, 1 << 3, 1 << 2, 1 << 1, 1 << 0};
+        
+        public static int MostSignificantBitMask(int x)
+        {
+            var isZero = x == 0 ? 0 : 1;
+            x |= x >> 1;
+            x |= x >> 2;
+            x |= x >> 4;
+            x |= x >> 8;
+            x |= x >> 16;
+            return isZero * (x >> 1 + 1);
+        }
     }
 
     public static class Network
@@ -168,7 +180,7 @@ namespace Athernet.Utils
 
         public static void ListDevices()
         {
-            for (int i = -1; i < WaveOut.DeviceCount; i++)
+            for (var i = -1; i < WaveOut.DeviceCount; i++)
             {
                 var caps = WaveOut.GetCapabilities(i);
                 Console.WriteLine($"WaveOut device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
@@ -176,7 +188,7 @@ namespace Athernet.Utils
 
             Console.WriteLine();
 
-            for (int i = -1; i < WaveIn.DeviceCount; i++)
+            for (var i = -1; i < WaveIn.DeviceCount; i++)
             {
                 var caps = WaveIn.GetCapabilities(i);
                 Console.WriteLine($"WaveIn device #{i}\n\t {caps.ProductName}: {caps.ProductGuid}");
@@ -186,7 +198,7 @@ namespace Athernet.Utils
 
         public static int? GetInDeviceNumber(string Name)
         {
-            for (int i = 0; i < WaveIn.DeviceCount; i++)
+            for (var i = 0; i < WaveIn.DeviceCount; i++)
             {
                 var caps = WaveIn.GetCapabilities(i);
                 if (caps.ProductName.Contains(Name))
@@ -200,7 +212,7 @@ namespace Athernet.Utils
 
         public static int? GetOutDeviceNumber(string Name)
         {
-            for (int i = 0; i < WaveOut.DeviceCount; i++)
+            for (var i = 0; i < WaveOut.DeviceCount; i++)
             {
                 var caps = WaveOut.GetCapabilities(i);
                 if (caps.ProductName.Contains(Name))
@@ -237,7 +249,7 @@ namespace Athernet.Utils
             {
                 using Stream stream = file.Open(FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                 using var wave = new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(48000, 1));
-                var provider = new Athernet.SampleProviders.MonoRawSampleProvider(samples).ToWaveProvider();
+                var provider = new MonoRawSampleProvider(samples).ToWaveProvider();
                 var bytebuffer = new byte[48000];
 
                 var len = 48000;
@@ -279,7 +291,7 @@ namespace Athernet.Utils
             {
                 DeviceNumber = 1
             };
-            w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
+            w.Init(new MonoRawSampleProvider(samples));
             w.Play();
 
             w.PlaybackStopped += (sender, args) => ewh.Set();
@@ -290,7 +302,7 @@ namespace Athernet.Utils
         {
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
             using var w = new DirectSoundOut(deviceGuid);
-            w.Init(new Athernet.SampleProviders.MonoRawSampleProvider(samples));
+            w.Init(new MonoRawSampleProvider(samples));
             w.Play();
 
             w.PlaybackStopped += (sender, args) => ewh.Set();
