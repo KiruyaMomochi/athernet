@@ -11,7 +11,7 @@
         int BitDepth { get; set; }
 
         /// <summary>
-        /// Sample rate of result signal.
+        /// Sample rate of carrier signal.
         /// </summary>
         int SampleRate { get; set; }
 
@@ -21,10 +21,10 @@
         int Channel { get; set; }
 
         /// <summary>
-        /// Modulate the given data to float samples
+        /// Modulate the given data to float samples.
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /// <param name="data">The data to be modulated.</param>
+        /// <returns>The modulated samples.</returns>
         float[] Modulate(byte[] data);
     }
 }

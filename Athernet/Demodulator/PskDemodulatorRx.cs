@@ -12,6 +12,9 @@ namespace Athernet.Demodulator
     /// </summary>
     public class PskDemodulatorRx
     {
+        /// <summary>
+        /// Number of samples for a bit.
+        /// </summary>
         public int BitDepth { get; init; }
 
         /// <summary>
@@ -29,7 +32,7 @@ namespace Athernet.Demodulator
         /// The lock for <c>Process</c> function.
         /// When processing, the value is <value>1</value>.
         /// </summary>
-        private int _processing = 0;
+        private int _processing;
 
         /// <summary>
         /// The carrier buffer.
@@ -172,6 +175,7 @@ namespace Athernet.Demodulator
             }
             finally
             {
+                // Release the lock
                 Interlocked.Exchange(ref _processing, 0);
             }
         }
