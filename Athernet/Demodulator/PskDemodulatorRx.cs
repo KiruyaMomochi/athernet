@@ -20,7 +20,8 @@ namespace Athernet.Demodulator
         /// <summary>
         /// The payload where demodulated data will be saved to.
         /// </summary>
-        public ISubject<byte> Payload { get; }
+        public ISubject<IEnumerable<byte>> Payload { get; }
+        //public ISubject<byte> Payload { get; }
 
         /// <summary>
         /// The list to save samples.
@@ -51,6 +52,8 @@ namespace Athernet.Demodulator
         /// </summary>
         private int _carrierOffset;
 
+        private readonly List<byte> _payload;
+
         /// <summary>
         /// PSKCore constructor.
         /// </summary>
@@ -61,10 +64,10 @@ namespace Athernet.Demodulator
         {
             // TODO: Give it a initial size.
             _samples = new List<float>();
+            _payload = new List<byte>();
             // TODO: Give it a buffer size.
-            Payload = new ReplaySubject<byte>();
+            Payload = new Subject<IEnumerable<byte>>();
             source.Subscribe(OnNextSample, OnError, OnComplete);
-
 
             // Initialize carrier by carrierBufferLength
             _carrierGenerator = carrierGenerator;
@@ -92,6 +95,8 @@ namespace Athernet.Demodulator
                 return;
 
             _complete = true;
+
+            Payload.OnNext(_payload);
             Payload.OnCompleted();
         }
 
@@ -201,7 +206,7 @@ namespace Athernet.Demodulator
                 return;
 
             // if _nBit == 8
-            Payload.OnNext(_byte);
+            _payload.Add(_byte);
             _nBit = 0;
             _byte = 0;
         }
@@ -236,14 +241,14 @@ namespace Athernet.Demodulator
             var localMaximum = 0f;
             var localMaxOffset = 0;
 
-            Trace.Assert(_nSample + _offset + minOffset >= 0);
+            Debug.Assert(_nSample + _offset + minOffset >= 0);
 
             // Loop for each possible offset.
-            for (int offset = minOffset; offset < maxOffset + 1; offset++)
+            for (var offset = minOffset; offset < maxOffset + 1; offset++)
             {
                 // Calculate the sum.
                 var sum = 0f;
-                for (int i = 0; i < BitDepth; i++)
+                for (var i = 0; i < BitDepth; i++)
                     sum += _samples[_nSample + _offset + offset + i] * _carrierBuffer[_nSample - _carrierOffset + i];
 
                 // Compare the local maximum with the new sum
