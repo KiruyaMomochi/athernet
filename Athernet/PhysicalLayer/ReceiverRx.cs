@@ -5,18 +5,11 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
-using Athernet.Modulators;
-using Athernet.Preambles.PreambleDetectors;
-using Athernet.SampleProviders;
-using Athernet.Utils;
+using Athernet.Demodulator;
+using Athernet.Modulator;
+using Athernet.PreambleDetector;
 using Force.Crc32;
 using NAudio.Wave;
-using Debug = Athernet.Utils.Debug;
 
 namespace Athernet.PhysicalLayer
 {
@@ -27,7 +20,7 @@ namespace Athernet.PhysicalLayer
     {
         public int DeviceNumber { get; set; }
         public int PayloadBytes { get; set; }
-        public float[] Preamble { get; set; } = new float[0];
+        public float[] Preamble { get; set; } = Array.Empty<float>();
         public DpskModulator Modulator { get; set; }
         public ReceiveState State { get; private set; } = ReceiveState.Stopped;
 
@@ -44,28 +37,35 @@ namespace Athernet.PhysicalLayer
         {
             Modulator = modulator;
             DeviceNumber = deviceNumber;
-        }
-
-        public void StartReceive()
-        {
-            Trace.WriteLine($"-R- Starting receiver.");
-
-            if (State != ReceiveState.Stopped)
-                return;
-
-            State = ReceiveState.Syncing;
             InitReceiver();
             InitRx();
+        }
+
+        private readonly object _lock = new();
+
+        /// <summary>
+        /// Start receive new samples.
+        /// If the receiving is already started, this function has no effect.
+        /// </summary>
+        public void StartReceive()
+        {
+            lock (_lock)
+            {
+                Debug.WriteLine("-R- Starting receiver.", "ReceiverRx");
+                if (State != ReceiveState.Stopped)
+                    return;
+                State = ReceiveState.Syncing;
+            }
+
             StartRecorder();
         }
 
         private WaveInEvent _recorder;
-        private float[] _buffer = new float[0];
-        IObservable<EventPattern<WaveInEventArgs>> _dataReceived;
+        private IObservable<EventPattern<WaveInEventArgs>> _dataReceived;
 
         private void StartRecorder()
         {
-            Trace.WriteLine($"-R- Starting recorder.");
+            Debug.WriteLine("-R- Starting recorder.", "ReceiverRx");
 
             _recorder.StartRecording();
         }
@@ -78,8 +78,8 @@ namespace Athernet.PhysicalLayer
         // }
 
         // TODO: CSMA
-        private float _channelPower;
-        public bool ChannelFree => _channelPower < 0.02;
+        //private float _channelPower;
+        //public bool ChannelFree => _channelPower < 0.02;
         private CrossCorrelationDetector _detector;
 
         private int WindowSize => 2 * Preamble.Length + Math.Max(_detector.WindowSize, FrameSamples);
@@ -133,7 +133,7 @@ namespace Athernet.PhysicalLayer
                 .Select(x => _detector.Detect(x))
                 .Where(pos => pos != -1)
                 .Select(pos => ret.Skip(pos))
-                .Select(x => new PskCore(x, Modulator.NewSineSignal()){BitDepth = Modulator.BitDepth}.Payload)
+                .Select(x => new PskDemodulatorRx(x, Modulator.NewCarrier()) {BitDepth = Modulator.BitDepth}.Payload)
                 .Merge();
             // var core = new PskCore(samples);
             // return core.Payload;
@@ -146,7 +146,7 @@ namespace Athernet.PhysicalLayer
             return samples.Select(
                 y =>
                 {
-                    var core = new DpskCore(Modulator.NewSineSignal(), Modulator.BitDepth, maxFrameBytes);
+                    var core = new DpskCore(Modulator.NewCarrier(), Modulator.BitDepth, maxFrameBytes);
                     y.Subscribe(
                         x => core.Add(x),
                         (e) => core.Error(e),
@@ -165,7 +165,7 @@ namespace Athernet.PhysicalLayer
             }
 
             var res = Crc32Algorithm.IsValidWithCrcAtEnd(arg);
-            Trace.WriteLine($"R4. Validating CRC: {res}.");
+            Debug.WriteLine($"R4. Validating CRC: {res}.");
             return new DataAvailableEventArgs(arg.Take(arg.Length - 4).ToArray(), res);
         }
 
@@ -195,13 +195,13 @@ namespace Athernet.PhysicalLayer
 
         private void OnDataAvailable(DataAvailableEventArgs args)
         {
-            Trace.WriteLine($"R5. New data available, length: {args.Data.Length}.");
+            Debug.WriteLine($"R5. New data available, length: {args.Data.Length}.");
             DataAvailable?.Invoke(this, args);
         }
 
         private void OnPacketDetected()
         {
-            Trace.WriteLine($"Rx{DeviceNumber} Packet Detected");
+            Debug.WriteLine($"Rx{DeviceNumber} Packet Detected");
             PacketDetected?.Invoke(this, EventArgs.Empty);
         }
     }

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Athernet.Modulators;
+using Athernet.Modulator;
 using Athernet.Utils;
 using NAudio.Wave;
 
@@ -47,7 +47,7 @@ namespace Athernet.PhysicalLayer
         /// </summary>
         internal DpskModulator Modulator
         {
-            get => _receiver.Modulator; 
+            get => _receiver.Modulator;
             set => _receiver.Modulator = _transmitter.Modulator = value;
         }
 
@@ -78,7 +78,7 @@ namespace Athernet.PhysicalLayer
         /// The receive state of the physical layer.
         /// </summary>
         public ReceiveState ReceiveState => _receiver.State;
-        
+
         /// <summary>
         /// Returns true when recording.
         /// </summary>
@@ -92,7 +92,7 @@ namespace Athernet.PhysicalLayer
             add => _receiver.DataAvailable += value;
             remove => _receiver.DataAvailable -= value;
         }
-        
+
         /// <summary>
         /// Indicate A new packet is found by detecting the frame. 
         /// </summary>
@@ -101,7 +101,7 @@ namespace Athernet.PhysicalLayer
             add => _receiver.PacketDetected += value;
             remove => _receiver.PacketDetected -= value;
         }
-        
+
         /// <summary>
         /// Indicate the playing process is stopped.
         /// </summary>
@@ -110,7 +110,7 @@ namespace Athernet.PhysicalLayer
             add => _transmitter.PlayStopped += value;
             remove => _transmitter.PlayStopped -= value;
         }
-        
+
         /// <summary>
         /// Indicate the playing process is complete.
         /// </summary>
@@ -133,7 +133,7 @@ namespace Athernet.PhysicalLayer
             _receiver = new ReceiverRx(modulator, recordDeviceNumber);
             PayloadBytes = payloadBytes;
         }
-        
+
         /// <summary>
         /// Play a payload.
         /// </summary>
@@ -148,18 +148,18 @@ namespace Athernet.PhysicalLayer
             Debug.UpdateTimeSpan();
             _transmitter.AddPayload(payload);
         }
-        
+
         /// <summary>
         /// Stop playing.
         /// </summary>
-        public void CompletePlaying() => _transmitter.Complete(); 
+        public void CompletePlaying() => _transmitter.Complete();
 
         /// <summary>
         /// Start receive new frames.
         /// When new frame arrived, DataAvailable will raise.
         /// </summary>
         public void StartReceive() => _receiver.StartReceive();
-        
+
         /// <summary>
         /// Stop receive new frames.
         /// When new frame arrived, DataAvailable will raise.

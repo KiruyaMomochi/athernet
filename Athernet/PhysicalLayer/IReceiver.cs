@@ -1,5 +1,5 @@
 using System;
-using Athernet.Modulators;
+using Athernet.Modulator;
 
 namespace Athernet.PhysicalLayer
 {

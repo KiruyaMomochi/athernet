@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
-using Athernet.Modulators;
+using Athernet.Modulator;
 using Force.Crc32;
 using NAudio.Wave;
 
@@ -14,8 +14,6 @@ namespace Athernet.PhysicalLayer
     {
         public int DeviceNumber => _wo.DeviceNumber;
 
-        public int SampleRate => Modulator.SampleRate;
-
         public Channel Channel { get; set; } = Channel.Mono;
 
         public float[] Preamble { get; set; } = new float[0];
@@ -24,7 +22,11 @@ namespace Athernet.PhysicalLayer
 
         public TransmitState State { get; private set; } = TransmitState.Idle;
 
-        private readonly BufferedWaveProvider _provider;
+        /// <summary>
+        /// A buffered wave provider.
+        /// Used for queuing samples that need to be played.
+        /// </summary>
+        private readonly BufferedWaveProvider _buffer;
 
         private readonly WaveOutEvent _wo;
 
@@ -41,7 +43,7 @@ namespace Athernet.PhysicalLayer
         public Transmitter(DpskModulator modulator, int deviceNumber = 0, int bufferLength = 19200000)
         {
             Modulator = modulator;
-            _provider = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, 1))
+            _buffer = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, 1))
             {
                 BufferLength = bufferLength,
                 ReadFully = false
@@ -51,40 +53,41 @@ namespace Athernet.PhysicalLayer
                 DeviceNumber = deviceNumber
             };
 
+            // Init pipeline and wave out event;
             Init();
         }
 
         // TPL Blocks used for transmitter.
-        // AddCrc -> ModulateArray -> PlaySamples.
-        private TransformBlock<IEnumerable<byte>, byte[]> _addCrc;
-
+        // PreProcess -> ModulateArray -> PlaySamples.
+        private TransformBlock<byte[], byte[]> _preProcess;
         private TransformBlock<byte[], float[]> _modulateArray;
-
         private ActionBlock<float[]> _playSamples;
 
-        readonly EventWaitHandle _playSamplesEventWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
-
+        /// <summary>
+        /// Init the TPL pipeline blocks and the <code>WaveOutEvent</code>,
+        /// add event listener to <code>PlaybackStopped</code>.
+        /// </summary>
         private void Init()
         {
             // Initialize blocks.
-            _addCrc = new TransformBlock<IEnumerable<byte>, byte[]>(AddCrc);
-            _modulateArray = new TransformBlock<byte[], float[]>(s => Modulator.Modulate(s));
+            _preProcess = new TransformBlock<byte[], byte[]>(PreProcess);
+            _modulateArray = new TransformBlock<byte[], float[]>(Modulator.Modulate);
             _playSamples = new ActionBlock<float[]>(AddSamples);
 
             // Link blocks.
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
-            _addCrc.LinkTo(_modulateArray, linkOptions);
+            _preProcess.LinkTo(_modulateArray, linkOptions);
             _modulateArray.LinkTo(_playSamples, linkOptions);
 
-            // Init WaveOutEvent
-            _wo.Init(_provider);
+            // Init WaveOutEvent.
+            _wo.Init(_buffer);
             _wo.PlaybackStopped += (s, a) => { OnPlayStopped(a); };
         }
 
-        public void AddPayload(IEnumerable<byte> bytes)
+        public void AddPayload(byte[] bytes)
         {
             State = TransmitState.Transmitting;
-            _addCrc.Post(bytes);
+            _preProcess.Post(bytes);
         }
 
         public void Complete()
@@ -94,15 +97,17 @@ namespace Athernet.PhysicalLayer
                 return;
             }
 
-            _addCrc.Complete();
+            _preProcess.Complete();
         }
 
-        private static byte[] AddCrc(IEnumerable<byte> arg)
+        /// <summary>
+        /// Process the <paramref name="arg"/> before modulation.
+        /// </summary>
+        /// <param name="arg"></param>
+        /// <returns></returns>
+        private static byte[] PreProcess(byte[] arg)
         {
-            Trace.WriteLine("P1. Adding CRC to the incoming payload.");
-            var arr = arg.Concat(new byte[4]).ToArray();
-            Crc32Algorithm.ComputeAndWriteToEnd(arr);
-            return arr;
+            return new PhysicalFrame(arg).Frame;
         }
 
         // private IEnumerable<IEnumerable<byte>> DivideBytes(byte[] source)
@@ -128,7 +133,7 @@ namespace Athernet.PhysicalLayer
                 throw new ArgumentOutOfRangeException();
             }
             
-            _provider.AddSamples(byteFrame, 0, byteFrame.Length);
+            _buffer.AddSamples(byteFrame, 0, byteFrame.Length);
             _wo.Play();
         }
 
@@ -151,13 +156,13 @@ namespace Athernet.PhysicalLayer
         private static readonly byte[] Noise = new byte[]
             {252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252};
 
-        private static float[] NoiseSamples = null;
+        private static float[] _noiseSamples = null;
 
         public void SendPing()
         {
-            NoiseSamples ??= 
-                NoiseSamples = Modulator.Modulate(Noise, false);
-            AddSamples(NoiseSamples);
+            _noiseSamples ??= 
+                _noiseSamples = Modulator.Modulate(Noise, false);
+            AddSamples(_noiseSamples);
         }
     }
 }

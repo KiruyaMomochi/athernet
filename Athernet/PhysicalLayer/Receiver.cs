@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Athernet.Modulators;
-using Athernet.Preambles.PreambleDetectors;
+using Athernet.Modulator;
+using Athernet.PreambleDetector;
 using Force.Crc32;
 using NAudio.Wave;
 
@@ -18,7 +18,7 @@ namespace Athernet.PhysicalLayer
     {
         public int DeviceNumber { get; set; }
         public int PayloadBytes { get; set; }
-        public float[] Preamble { get; set; } = new float[0];
+        public float[] Preamble { get; set; } = Array.Empty<float>();
         public DpskModulator Modulator { get; set; }
         public ReceiveState State { get; private set; } = ReceiveState.Stopped;
 
@@ -67,13 +67,13 @@ namespace Athernet.PhysicalLayer
         private TransformBlock<float[], byte[]> _demodulateSamples;
         private TransformBlock<byte[], DataAvailableEventArgs> _validateCrc;
         private ActionBlock<DataAvailableEventArgs> _dataAvailable;
-        private static readonly DataflowLinkOptions LinkOptions = new DataflowLinkOptions {PropagateCompletion = true};
-        private float[] _buffer = new float[0];
+        private static readonly DataflowLinkOptions LinkOptions = new() { PropagateCompletion = true};
+        private float[] _buffer = Array.Empty<float>();
         
         
         private void StartRecorder()
         {            
-            Trace.WriteLine($"-R- Starting recorder.");
+            Trace.WriteLine("-R- Starting recorder.");
 
             _recorder?.Dispose();
             _recorder = new WaveInEvent()
