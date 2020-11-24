@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using Athernet.SampleProvider;
 
-namespace Athernet.Modulator
+namespace Athernet.Demodulator
 {
     /// <summary>
     /// Demodulate samples from IObservable by PSK method.

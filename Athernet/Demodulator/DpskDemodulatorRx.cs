@@ -1,7 +1,7 @@
 using System;
 using Athernet.SampleProvider;
 
-namespace Athernet.Modulator
+namespace Athernet.Demodulator
 {
     public class DpskDemodulatorRx : PskDemodulatorRx
     {

@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using NAudio.Wave;
 
-namespace Athernet.Modulator
+namespace Athernet.Demodulator
 {
     public class DpskCore
     {

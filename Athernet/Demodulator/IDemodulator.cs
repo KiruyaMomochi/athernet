@@ -2,7 +2,6 @@
 {
     /// <summary>
     /// Demodulator interface.
-    /// 
     /// </summary>
     internal interface IDemodulator
     {
