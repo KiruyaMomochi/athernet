@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Athernet.Modulator;
+using Athernet.Demodulator;
 using Athernet.PreambleDetector;
 using Force.Crc32;
 using NAudio.Wave;
@@ -14,15 +14,15 @@ namespace Athernet.PhysicalLayer
     /// <summary>
     /// Receiver of the physical layer
     /// </summary>
-    public sealed class Receiver : IReceiver
+    public sealed class Receiver /*: IReceiver*/
     {
         public int DeviceNumber { get; set; }
         public int PayloadBytes { get; set; }
         public float[] Preamble { get; set; } = Array.Empty<float>();
-        public DpskModulator Modulator { get; set; }
+        public DpskDemodulator Demodulator { get; set; }
         public ReceiveState State { get; private set; } = ReceiveState.Stopped;
 
-        public int SampleRate => Modulator.SampleRate;
+        public int SampleRate => Demodulator.SampleRate;
 
         /// <summary>
         /// Indicates new data is available
@@ -31,9 +31,9 @@ namespace Athernet.PhysicalLayer
 
         public event EventHandler PacketDetected;
 
-        public Receiver(DpskModulator modulator, int deviceNumber = 0)
+        public Receiver(DpskDemodulator demodulator, int deviceNumber = 0)
         {
-            Modulator = modulator;
+            Demodulator = demodulator;
             DeviceNumber = deviceNumber;
         }
 
@@ -115,7 +115,7 @@ namespace Athernet.PhysicalLayer
             return new DataAvailableEventArgs(arg.Take(arg.Length - 4).ToArray(), res);
         }
 
-        private byte[] DemodulateSamples(float[] samples) => Modulator.Demodulate(samples, PayloadBytes + 4);
+        private byte[] DemodulateSamples(float[] samples) => Demodulator.Demodulate(samples, PayloadBytes + 4);
 
         // private int _idx = 0;
 
@@ -155,7 +155,7 @@ namespace Athernet.PhysicalLayer
         {
             Trace.WriteLine($"R2{DeviceNumber} Decoding buffer.");
             // CRC
-            var realFrameSamples = ((PayloadBytes + 4) * 8 + 1) * Modulator.BitDepth; 
+            var realFrameSamples = ((PayloadBytes + 4) * 8 + 1) * Demodulator.BitDepth; 
             var frameSamples = realFrameSamples + 100;
 
             if (_buffer.Length < frameSamples)

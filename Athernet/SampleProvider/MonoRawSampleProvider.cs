@@ -1,7 +1,7 @@
-﻿using NAudio.Wave;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using NAudio.Wave;
 
-namespace Athernet.SampleProviders
+namespace Athernet.SampleProvider
 {
     public class MonoRawSampleProvider : ISampleProvider
     {
@@ -17,7 +17,7 @@ namespace Athernet.SampleProviders
 
         public int Read(float[] buffer, int offset, int count)
         {
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 if (_sampleEnumerator.MoveNext())
                     buffer[offset + i] = _sampleEnumerator.Current;

@@ -1,7 +1,7 @@
-﻿using NAudio.Wave;
-using System;
+﻿using System;
+using NAudio.Wave;
 
-namespace Athernet.SampleProviders
+namespace Athernet.SampleProvider
 {
     public class SineGenerator : ISampleProvider
     {
@@ -22,19 +22,19 @@ namespace Athernet.SampleProviders
         }
 
         private const double TwoPi = 2 * Math.PI;
-        private uint _nSample = 0;
+        private uint _nSample;
 
         public int Read(float[] buffer, int offset, int count)
         {
             // Generator current value
-            int outIndex = offset;
+            var outIndex = offset;
 
             // Complete Buffer
-            for (int sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
+            for (var sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
             {
                 var multiple = TwoPi * Frequency / WaveFormat.SampleRate;
                 var sampleValue = Gain * Math.Sin(_nSample * multiple + PhaseShift);
-                for (int i = 0; i < WaveFormat.Channels; i++) 
+                for (var i = 0; i < WaveFormat.Channels; i++) 
                     buffer[outIndex++] = (float) sampleValue;
                 _nSample++;
             }
@@ -44,14 +44,14 @@ namespace Athernet.SampleProviders
         public int Peek(float[] buffer, int offset, int count)
         {
             // Generator current value
-            int outIndex = offset;
+            var outIndex = offset;
 
             // Complete Buffer
-            for (int sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
+            for (var sampleCount = 0; sampleCount < count / WaveFormat.Channels; sampleCount++)
             {
                 var multiple = TwoPi * Frequency / WaveFormat.SampleRate;
                 var sampleValue = Gain * Math.Sin((_nSample + sampleCount) * multiple + PhaseShift);
-                for (int i = 0; i < WaveFormat.Channels; i++) 
+                for (var i = 0; i < WaveFormat.Channels; i++) 
                     buffer[outIndex++] = (float) sampleValue;
             }
             return count;

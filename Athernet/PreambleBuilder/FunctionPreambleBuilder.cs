@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Athernet.Preambles.PreambleBuilders
+namespace Athernet.PreambleBuilder
 {
     public class FunctionPreambleBuilder
     {
@@ -14,7 +14,7 @@ namespace Athernet.Preambles.PreambleBuilders
             SampleRate = sampleRate;
             Time = time;
             preamble = new float[SampleCount];
-            for (int i = 0; i < SampleCount; i++)
+            for (var i = 0; i < SampleCount; i++)
             {
                 preamble[i] = buildFunction((float)i / SampleRate);
             }
@@ -25,7 +25,7 @@ namespace Athernet.Preambles.PreambleBuilders
             SampleRate = sampleRate;
             Time = time;
             preamble = new float[SampleCount];
-            for (int i = 0; i < SampleCount; i++)
+            for (var i = 0; i < SampleCount; i++)
             {
                 preamble[i] = buildFunction(i, SampleRate);
             }
@@ -36,7 +36,7 @@ namespace Athernet.Preambles.PreambleBuilders
             SampleRate = sampleRate;
             Time = time;
             preamble = new float[SampleCount];
-            for (int i = 0; i < SampleCount; i++)
+            for (var i = 0; i < SampleCount; i++)
             {
                 preamble[i] = buildFunction(i, SampleRate, SampleCount);
             }

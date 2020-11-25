@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
-using Athernet.Modulator;
+using Athernet.Demodulator;
 using Force.Crc32;
 using NAudio.Wave;
 

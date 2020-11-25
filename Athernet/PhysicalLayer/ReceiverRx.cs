@@ -6,7 +6,6 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Athernet.Demodulator;
-using Athernet.Modulator;
 using Athernet.PreambleDetector;
 using Force.Crc32;
 using NAudio.Wave;
@@ -16,7 +15,7 @@ namespace Athernet.PhysicalLayer
     /// <summary>
     /// Receiver of the physical layer
     /// </summary>
-    public sealed class ReceiverRx : IReceiver
+    public sealed class ReceiverRx
     {
         public int DeviceNumber { get; set; }
         public int PayloadBytes { get; set; }
@@ -125,7 +124,7 @@ namespace Athernet.PhysicalLayer
             return arr == -1 ? null : observable.Skip(arr).Take(FrameSamples).ToArray();
         }
 
-        private IObservable<byte> SkipToPreamble(IObservable<float> observable)
+        private IObservable<IEnumerable<byte>> SkipToPreamble(IObservable<float> observable)
         {
             var ret = observable.Publish().RefCount();
             var samples = ret.Take(2 * Preamble.Length + _detector.WindowSize)
@@ -133,7 +132,7 @@ namespace Athernet.PhysicalLayer
                 .Select(x => _detector.Detect(x))
                 .Where(pos => pos != -1)
                 .Select(pos => ret.Skip(pos))
-                .Select(x => new PskDemodulatorRx(x, Modulator.NewCarrier()) {BitDepth = Modulator.BitDepth}.Payload)
+                .Select(x => new PskDemodulatorRx(x, PayloadBytes + 4, Modulator.NewCarrier()) { BitDepth = Modulator.BitDepth }.Frame)
                 .Merge();
             // var core = new PskCore(samples);
             // return core.Payload;
@@ -167,12 +166,6 @@ namespace Athernet.PhysicalLayer
             var res = Crc32Algorithm.IsValidWithCrcAtEnd(arg);
             Debug.WriteLine($"R4. Validating CRC: {res}.");
             return new DataAvailableEventArgs(arg.Take(arg.Length - 4).ToArray(), res);
-        }
-
-        private byte[] DemodulateSamples(float[] samples)
-        {
-            var ret = Modulator.Demodulate(samples, PayloadBytes + 4);
-            return ret;
         }
 
         // private IEnumerable<byte> DemodulateSamples(IObservable<float> samples)

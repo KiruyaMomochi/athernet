@@ -1,4 +1,4 @@
-﻿namespace Athernet.Modulator
+﻿namespace Athernet.Demodulator
 {
     /// <summary>
     /// The differential PSK binary modulator.

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Athernet.Modulator;
+using Athernet.Demodulator;
 using Athernet.Utils;
 using NAudio.Wave;
 
@@ -11,7 +11,7 @@ namespace Athernet.PhysicalLayer
     /// </summary>
     public sealed class Physical
     {
-        private readonly IReceiver _receiver;
+        private readonly ReceiverRx _receiver;
         private readonly Transmitter _transmitter;
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace Athernet.PhysicalLayer
         /// </summary>
         public void StopReceive() => _receiver.StopReceive();
 
-        internal bool ChannelFree => _receiver.ChannelFree;
+        //internal bool ChannelFree => _receiver.ChannelFree;
 
         public void SendPing()
         {

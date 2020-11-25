@@ -1,4 +1,4 @@
-﻿namespace Athernet.Modulator
+﻿namespace Athernet.Demodulator
 {
     /// <summary>
     /// Modulator interface.

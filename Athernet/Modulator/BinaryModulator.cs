@@ -1,7 +1,7 @@
 ﻿using Athernet.SampleProvider;
 using Athernet.Utils;
 
-namespace Athernet.Modulator
+namespace Athernet.Demodulator
 {
     /// <summary>
     /// The binary modulator class.

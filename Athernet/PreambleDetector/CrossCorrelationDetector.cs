@@ -1,12 +1,8 @@
-﻿using NAudio.Wave;
+﻿using System;
 using NWaves.Operations.Convolution;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using static NWaves.Utils.MemoryOperationExtensions;
 
-namespace Athernet.Preambles.PreambleDetectors
+namespace Athernet.PreambleDetector
 {
     /// <summary>
     /// Detect the position of preamble by cross correlation.
@@ -67,7 +63,7 @@ namespace Athernet.Preambles.PreambleDetectors
             var localMaximum = float.MinValue;
             var maxIndex = -1;
 
-            int i = 0;
+            var i = 0;
             for (; i < Preamble.Length - 1; i++)
             {
                 localPower = localPower * 63 / 64 + _output[i] * _output[i] / 64;

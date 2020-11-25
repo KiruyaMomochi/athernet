@@ -1,5 +1,5 @@
 using System;
-using Athernet.Modulator;
+using Athernet.Demodulator;
 
 namespace Athernet.PhysicalLayer
 {
@@ -10,7 +10,7 @@ namespace Athernet.PhysicalLayer
         bool ChannelFree { get; }
         ReceiveState State { get; }
         int PayloadBytes { get; set; }
-        DpskModulator Modulator { get; set; }
+        IDemodulator Demodulator { get; set; }
         float[] Preamble { get; set; }
         int DeviceNumber { get; set; }
 

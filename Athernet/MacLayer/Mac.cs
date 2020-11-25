@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using Athernet.Modulator;
+using Athernet.Demodulator;
 using Athernet.PhysicalLayer;
 using Athernet.PreambleBuilder;
 
@@ -156,7 +156,7 @@ namespace Athernet.MacLayer
             
             while (true)
             {
-                Backoff();
+                //Backoff();
                 AddData(frame);
 
                 if (!NeedAck) return;
@@ -176,16 +176,16 @@ namespace Athernet.MacLayer
             }
         }
 
-        private void Backoff()
-        {
-            while (!_physical.ChannelFree)
-            {
-                var waitTime = _backoff.Wait();
-                Console.WriteLine($"Mb{Address} Wait {waitTime} times");
-            }
+        //private void Backoff()
+        //{
+        //    while (!_physical.ChannelFree)
+        //    {
+        //        var waitTime = _backoff.Wait();
+        //        Console.WriteLine($"Mb{Address} Wait {waitTime} times");
+        //    }
 
-            _backoff.Reset();
-        }
+        //    _backoff.Reset();
+        //}
 
         private void AddData(MacFrame macFrame)
         {
@@ -233,14 +233,14 @@ namespace Athernet.MacLayer
 
         private void ReplyWithAck(in MacFrame frame)
         {
-            Backoff();
+            //Backoff();
             // AddData(frame.Src, frame.Dest, MacType.Ack, frame.Payload);
             SendPing(1);
         }
 
         private void ReplyWithReTrans(in MacFrame frame)
         {
-            Backoff();
+            //Backoff();
             AddData(frame.Src, frame.Dest, MacType.ReTrans, frame.Payload);
         }
 

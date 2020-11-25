@@ -3,22 +3,24 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Threading;
-using Athernet.SampleProviders;
-using NAudio.Wave;
+using Athernet.SampleProvider;
 
-namespace Athernet.Modulators
+namespace Athernet.Demodulator
 {
     /// <summary>
     /// Demodulate samples from IObservable by PSK method.
     /// </summary>
-    public class PskCore
+    public class PskDemodulatorRx
     {
+        /// <summary>
+        /// Number of samples for a bit.
+        /// </summary>
         public int BitDepth { get; init; }
 
         /// <summary>
         /// The payload where demodulated data will be saved to.
         /// </summary>
-        public ISubject<byte> Payload { get; }
+        public ISubject<IEnumerable<byte>> Frame { get; }
 
         /// <summary>
         /// The list to save samples.
@@ -30,7 +32,7 @@ namespace Athernet.Modulators
         /// The lock for <c>Process</c> function.
         /// When processing, the value is <value>1</value>.
         /// </summary>
-        private int _processing = 0;
+        private int _processing;
 
         /// <summary>
         /// The carrier buffer.
@@ -50,17 +52,32 @@ namespace Athernet.Modulators
         private int _carrierOffset;
 
         /// <summary>
+        /// The real length of payload.
+        /// </summary>
+        private uint? _lastFrameBytes;
+
+        private readonly List<byte> _frame;
+
+        public int MaxBytes;
+
+        /// <summary>
         /// PSKCore constructor.
         /// </summary>
         /// <param name="source">Samples to be demodulated, as an <c>IObservable</c>.</param>
+        /// <param name="maxBytes">The max length of payload.</param>
         /// <param name="carrierGenerator">A sine generator, which will be used to generate carrier.</param>
         /// <param name="carrierBufferLength">The length of carrier buffer.</param>
-        public PskCore(IObservable<float> source, SineGenerator carrierGenerator, int carrierBufferLength = 18000)
+        public PskDemodulatorRx(IObservable<float> source, int maxBytes, SineGenerator carrierGenerator,
+            int carrierBufferLength = 18000, int samplesLength = 0)
         {
-            // TODO: Give it a initial size.
-            _samples = new List<float>();
+            MaxBytes = maxBytes;
+
+            _samples = new List<float>(samplesLength);
+            _frame = new List<byte>(maxBytes);
+
             // TODO: Give it a buffer size.
-            Payload = new ReplaySubject<byte>();
+            Frame = new Subject<IEnumerable<byte>>();
+
             source.Subscribe(OnNextSample, OnError, OnComplete);
 
             // Initialize carrier by carrierBufferLength
@@ -76,7 +93,7 @@ namespace Athernet.Modulators
         private void OnError(Exception obj)
         {
             Console.WriteLine("OnError");
-            Payload.OnError(obj);
+            Frame.OnError(obj);
         }
 
         /// <summary>
@@ -85,12 +102,16 @@ namespace Athernet.Modulators
         private void OnComplete()
         {
             Console.WriteLine("Complete");
+
             if (_complete)
                 return;
-            ;
 
             _complete = true;
-            Payload.OnCompleted();
+
+            Debug.Assert(_frame.Count == MaxBytes);
+
+            Frame.OnNext(_frame);
+            Frame.OnCompleted();
         }
 
         /// <summary>
@@ -157,24 +178,45 @@ namespace Athernet.Modulators
                     // TODO: Adjust parameter may still need to be changed
                     var sum = _firstBit ? AdjustSum(0, 2) : AdjustSum(-1, 1);
 
-                    // Set the first bit to false
-                    _firstBit = false;
-
                     // If sum is positive, we set _nBit of _byte to true
-                    if (sum > 0)
-                        _byte |= (byte) (1 << _nBit);
-
+                    SetBit(sum > 0);
                     // Move to the next bit
                     AdvanceBit();
-
                     // Check if carrier need to be updated
-                    CheckCarrier();
+                    UpdateCarrier();
+                    // Check if complete.
+                    UpdateComplete();
+
+                    // Set the first bit to false,
+                    // so the following bits won't be treated as the first one. 
+                    _firstBit = false;
                 }
             }
             finally
             {
+                // Release the lock
                 Interlocked.Exchange(ref _processing, 0);
             }
+        }
+
+        /// <summary>
+        /// Check if the process is complete. If true, set <code>complete</code>.
+        /// </summary>
+        private void UpdateComplete()
+        {
+            // Complete when no more frame bytes
+            if (_lastFrameBytes == 0)
+                _complete = true;
+        }
+
+        /// <summary>
+        /// If <paramref name="b"/> is true, set the current bit to true.
+        /// </summary>
+        /// <param name="b">The value to be set</param>
+        protected virtual void SetBit(bool b)
+        {
+            if (b)
+                _byte |= (byte) (1 << _nBit);
         }
 
         /// <summary>
@@ -188,16 +230,42 @@ namespace Athernet.Modulators
                 return;
 
             // if _nBit == 8
-            Payload.OnNext(_byte);
+            AdvanceByte();
+
             _nBit = 0;
             _byte = 0;
+        }
+
+        /// <summary>
+        /// Advance a byte.
+        /// If it is the first byte, it will set <code>_lastFrameBytes</code>.
+        /// Otherwise, it will be added to <code>_frame</code>.
+        /// </summary>
+        private void AdvanceByte()
+        {
+            // Check if it is the first byte
+            if (_lastFrameBytes == null)
+            {
+                // If true, we set _lastPayloadBytes to 1 << _byte
+                _lastFrameBytes = (uint) 1 << _byte;
+                // If the result is more than MaxBytes,
+                // We complete the list directly.
+                if (_lastFrameBytes > MaxBytes)
+                    _complete = true;
+            }
+            else
+            {
+                // Add bit to the list
+                _frame.Add(_byte);
+                _lastFrameBytes--;
+            }
         }
 
         /// <summary>
         /// Check if carrier buffer is mostly used.
         /// If yes, then update the buffer.
         /// </summary>
-        private void CheckCarrier()
+        private void UpdateCarrier()
         {
             if (_nSample - _carrierOffset + BitDepth + 3 < _carrierBuffer.Length)
                 return;
@@ -223,14 +291,14 @@ namespace Athernet.Modulators
             var localMaximum = 0f;
             var localMaxOffset = 0;
 
-            Trace.Assert(_nSample + _offset + minOffset >= 0);
+            Debug.Assert(_nSample + _offset + minOffset >= 0);
 
             // Loop for each possible offset.
-            for (int offset = minOffset; offset < maxOffset + 1; offset++)
+            for (var offset = minOffset; offset < maxOffset + 1; offset++)
             {
                 // Calculate the sum.
                 var sum = 0f;
-                for (int i = 0; i < BitDepth; i++)
+                for (var i = 0; i < BitDepth; i++)
                     sum += _samples[_nSample + _offset + offset + i] * _carrierBuffer[_nSample - _carrierOffset + i];
 
                 // Compare the local maximum with the new sum
