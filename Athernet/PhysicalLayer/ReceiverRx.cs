@@ -6,6 +6,7 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Athernet.Demodulator;
+using Athernet.Demodulator.Rx;
 using Athernet.PreambleDetector;
 using Force.Crc32;
 using NAudio.Wave;
@@ -132,7 +133,7 @@ namespace Athernet.PhysicalLayer
                 .Select(x => _detector.Detect(x))
                 .Where(pos => pos != -1)
                 .Select(pos => ret.Skip(pos))
-                .Select(x => new PskDemodulatorRx(x, PayloadBytes + 4, Modulator.NewCarrier()) { BitDepth = Modulator.BitDepth }.Frame)
+                .Select(x => new PskDemodulator(x, PayloadBytes + 4, Modulator.NewCarrier()) { BitDepth = Modulator.BitDepth }.Frame)
                 .Merge();
             // var core = new PskCore(samples);
             // return core.Payload;

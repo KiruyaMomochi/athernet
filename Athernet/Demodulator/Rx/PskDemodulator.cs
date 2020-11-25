@@ -5,12 +5,12 @@ using System.Reactive.Subjects;
 using System.Threading;
 using Athernet.SampleProvider;
 
-namespace Athernet.Demodulator
+namespace Athernet.Demodulator.Rx
 {
     /// <summary>
     /// Demodulate samples from IObservable by PSK method.
     /// </summary>
-    public class PskDemodulatorRx
+    public class PskDemodulator
     {
         /// <summary>
         /// Number of samples for a bit.
@@ -58,7 +58,7 @@ namespace Athernet.Demodulator
 
         private readonly List<byte> _frame;
 
-        public int MaxBytes;
+        private readonly int _maxBytes;
 
         /// <summary>
         /// PSKCore constructor.
@@ -67,10 +67,11 @@ namespace Athernet.Demodulator
         /// <param name="maxBytes">The max length of payload.</param>
         /// <param name="carrierGenerator">A sine generator, which will be used to generate carrier.</param>
         /// <param name="carrierBufferLength">The length of carrier buffer.</param>
-        public PskDemodulatorRx(IObservable<float> source, int maxBytes, SineGenerator carrierGenerator,
+        /// <param name="samplesLength">Initial length of samples list.</param>
+        public PskDemodulator(IObservable<float> source, int maxBytes, SineGenerator carrierGenerator,
             int carrierBufferLength = 18000, int samplesLength = 0)
         {
-            MaxBytes = maxBytes;
+            _maxBytes = maxBytes;
 
             _samples = new List<float>(samplesLength);
             _frame = new List<byte>(maxBytes);
@@ -108,7 +109,7 @@ namespace Athernet.Demodulator
 
             _complete = true;
 
-            Debug.Assert(_frame.Count == MaxBytes);
+            Debug.Assert(_frame.Count == _maxBytes);
 
             Frame.OnNext(_frame);
             Frame.OnCompleted();
@@ -250,7 +251,7 @@ namespace Athernet.Demodulator
                 _lastFrameBytes = (uint) 1 << _byte;
                 // If the result is more than MaxBytes,
                 // We complete the list directly.
-                if (_lastFrameBytes > MaxBytes)
+                if (_lastFrameBytes > _maxBytes)
                     _complete = true;
             }
             else
