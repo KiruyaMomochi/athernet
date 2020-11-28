@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace RawSocket
 {
@@ -9,7 +10,6 @@ namespace RawSocket
         static void Main(string[] args)
         {
             Send("1.1.1.1", 1454);
-            Receive("1.1.1.1", 1454);
         }
 
         private static void Send(string hostname, int port)
@@ -18,8 +18,14 @@ namespace RawSocket
             var bytes = new byte[20];
             var random = new Random();
 
-            random.NextBytes(bytes);
-            udpClient.Send(bytes, bytes.Length, hostname, port);
+            var myTimer = new Timer(o =>
+            {
+                random.NextBytes(bytes);
+                Console.WriteLine($"Sending {BitConverter.ToString(bytes)}");
+                udpClient.Send(bytes, bytes.Length, hostname, port);
+            }, null, 0, 1000);
+
+            while (true){}
 
             udpClient.Close();
         }
