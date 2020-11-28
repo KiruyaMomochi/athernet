@@ -117,7 +117,7 @@ namespace Athernet.Utils
             x |= x >> 4;
             x |= x >> 8;
             x |= x >> 16;
-            return isZero * (x >> 1 + 1);
+            return isZero * ((x >> 1) + 1);
         }
     }
 

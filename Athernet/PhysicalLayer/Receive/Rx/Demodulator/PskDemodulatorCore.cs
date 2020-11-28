@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
@@ -83,7 +84,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             _frame = new List<byte>(_maxPayloadBytes);
             Payload = new ReplaySubject<IEnumerable<byte>>(1);
         }
-        
+
         /// <summary>
         /// Init the instance and subscribe to the source.
         /// </summary>
@@ -102,13 +103,13 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             _source.Subscribe(OnNextSample, OnError, OnComplete);
             return Payload;
         }
-        
+
         /// <summary>
         /// The callback function when <c>source</c> finishes.
         /// </summary>
         private void OnComplete()
         {
-            Console.WriteLine("OnComplete.");
+            //Console.WriteLine("OnComplete.");
             //Process();
             //_complete = true;
             //Process();
@@ -141,10 +142,12 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
 
         private void Complete()
         {
+            Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
+            _complete = true;
             Console.WriteLine("Complete");
 
             Debug.Assert(_frame.Count == _maxPayloadBytes);
-            if (Payload.IsDisposed) 
+            if (Payload.IsDisposed)
                 return;
 
             Payload.OnNext(_frame);
@@ -157,8 +160,12 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         /// <param name="sample">The sample received.</param>
         private void OnNextSample(float sample)
         {
-            Console.Write($"{sample} ");
+            if (_complete) return;
             _samples.Add(sample);
+            if (_samples.Count % 100 == 0)
+            {
+                Console.Write($"{sample} ");
+            }
             Process();
         }
 
@@ -196,7 +203,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             // running at the same time.
             if (Interlocked.Exchange(ref _processing, 1) != 0)
                 return;
-            
+
             Debug.Assert(BitDepth != 0);
 
             try
@@ -210,7 +217,8 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
 
                     // If it is the first bit, we check offset 0, 1, 2 and 3
                     // TODO: Adjust parameter may still need to be changed
-                    var sum = FirstBit ? AdjustSum(0, 2) : AdjustSum(-1, 1);
+                    //var sum = FirstBit ? AdjustSum(0, 2) : AdjustSum(-1, 1);
+                    var sum = FirstBit ? AdjustSum(0, 2) : AdjustSumOffset(1 , -1);
 
                     // If sum is positive, we set _nBit of _byte to true
                     SetBit(sum > 0);
@@ -230,11 +238,6 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             {
                 // Release the lock
                 Interlocked.Exchange(ref _processing, 0);
-
-                if (_complete)
-                {
-                    Complete();
-                }
             }
         }
 
@@ -246,10 +249,11 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             // Complete when no more frame bytes
             if (_lastPayloadBytes == 0)
             {
+                Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
                 //_source.SkipLast(0);
                 //OnComplete();
                 Console.WriteLine("Set _complete");
-                _complete = true;
+                Complete();
             }
         }
 
@@ -287,15 +291,17 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         /// </summary>
         private void AdvanceByte()
         {
+            Debug.Write($"-> {Byte:X} Offset: {_offset}\n");
+
             // Check if it is the first byte
             if (_lastPayloadBytes == null)
             {
                 // If true, we set _lastPayloadBytes to 1 << _byte
                 _lastPayloadBytes = (uint) 1 << Byte;
+                Debug.WriteLine($"Payload Bytes: {_lastPayloadBytes}", GetType());
                 // If the result is more than MaxBytes,
                 // We complete the list directly.
-                if (_lastPayloadBytes > _maxPayloadBytes)
-                    Complete();
+                if (_lastPayloadBytes > _maxPayloadBytes) Complete();
             }
             else
             {
@@ -362,12 +368,68 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         }
 
         /// <summary>
+        /// Adjust offset based on the sum, and return the sum with the best quality.
+        /// </summary>
+        /// <param name="offsets">The offset to check, should not contain 0.</param>
+        /// <returns>The best sum.</returns>
+        private float AdjustSumOffset(params int[] offsets)
+        {
+            // Init local maximum and offset.
+            var localMaximum = 0f;
+            var localMaxOffset = 0;
+
+            Debug.Assert(_nSample + _offset + offsets.Min() >= 0);
+            Debug.Assert(!offsets.Contains(0), "offset should not contain 0.");
+
+            for (var i = 0; i < BitDepth; i++)
+                localMaximum += _samples[_nSample + _offset + i] * _carrierBuffer[_nSample - _carrierOffset + i];
+
+            // Loop for each possible offset.
+            foreach (var offset in offsets)
+            {
+                // Calculate the sum.
+                var sum = 0f;
+                for (var i = 0; i < BitDepth; i++)
+                    sum += _samples[_nSample + _offset + offset + i] * _carrierBuffer[_nSample - _carrierOffset + i];
+
+                // Compare the local maximum with the new sum
+                if (!Compare(localMaximum, sum, 0.05f))
+                    continue;
+
+                // If the new sum is better, save it
+                localMaximum = sum;
+                localMaxOffset = offset;
+                break;
+            }
+
+            // Update offset and _nSample
+            _offset += localMaxOffset;
+            _nSample += BitDepth;
+
+            return localMaximum;
+        }
+
+        /// <summary>
         /// Compare the last sum with the new sum
         /// </summary>
         /// <param name="pre">The sum to be compared with.</param>
         /// <param name="now">The new sum.</param>
         /// <returns>True if the new sum is better.</returns>
         private static bool Compare(in float pre, in float now)
-            => pre >= 0 && now > pre || pre <= 0 && now < pre;
+        {
+            return pre >= 0 && now > pre || pre <= 0 && now < pre;
+        }
+
+        /// <summary>
+        /// Compare the last sum with the new sum
+        /// </summary>
+        /// <param name="pre">The sum to be compared with.</param>
+        /// <param name="now">The new sum.</param>
+        /// <param name="delta">The tolerate delta.</param>
+        /// <returns>True if the new sum is better.</returns>
+        private static bool Compare(in float pre, in float now, in float delta)
+        {
+            return pre >= 0 && now >= 0 && now - pre > delta || pre <= 0 && now <= 0 && pre - now > delta;
+        }
     }
 }

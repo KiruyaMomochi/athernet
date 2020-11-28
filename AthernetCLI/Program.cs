@@ -24,7 +24,7 @@ namespace AthernetCLI
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
 
-        private static byte[] DoTask(string fileName, int payloadBytes = 16)
+        private static byte[] DoTask(string fileName, int payloadBytes = 1020 )
         {
             var file = new FileInfo(fileName);
 
@@ -32,8 +32,11 @@ namespace AthernetCLI
             var node2 = new Physical(1, 2, payloadBytes);
 
             node2.StartReceive();
+            node2.DataAvailable += (sender, args) => Console.WriteLine($"Data: {BitConverter.ToString(args.Data)}, CRC: {args.CrcResult}");
 
             var buffer = new byte[payloadBytes];
+            var rand = new Random();
+            rand.NextBytes(buffer);
             //Array.Fill<byte>(buffer, 255);
 
             //file.OpenRead().Read(buffer);

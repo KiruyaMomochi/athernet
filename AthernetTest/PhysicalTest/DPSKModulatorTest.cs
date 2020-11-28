@@ -49,19 +49,15 @@ namespace AthernetTest.ModulatorTest
         public void DemodulateModulatedData()
         {
             var dpskModulator = new DpskModulator();
-            var dpskDemodulatorRx = new DpskDemodulatorRx{ MaxFrameBytes = 1000 };
+            var dpskDemodulatorRx = new DpskDemodulatorRx{ MaxFrameBytes = 1025 };
 
-            var data = new byte[1000];
+            var data = new byte[1025];
             new Random().NextBytes(data);
-            data[0] = 0;
+            data[0] = 10;
             var res = dpskModulator.Modulate(data).Concat(new float[5]);
             var obs = dpskDemodulatorRx.Demodulate(res.ToObservable());
-            var recData = obs.Subscribe(x =>
-            {
-                Console.WriteLine(x);
-            });
-            obs.Wait();
-            //Assert.True(data.SequenceEqual(recData));
+            var recData = obs.Wait();
+            Assert.True(data[1..].SequenceEqual(recData));
         }
 
         [Fact]
