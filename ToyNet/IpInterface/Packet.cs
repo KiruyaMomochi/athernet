@@ -229,6 +229,96 @@ namespace ToyNet.IpInterface.Packet
 
     }
 
+    class IcmpPacket : ProtocolPacket
+    {
+        private IcmpHeader header;
+        private byte[] payload;
+        public IcmpPacket()
+        {
+            header = new IcmpHeader();
+            payload = new byte[128]; // Default to be zero
+        }
+        public IcmpHeader Header
+        {
+            get
+            {
+                return header;
+            }
+            set
+            {
+                header = value;
+            }
+        }
+
+        public byte[] Payload
+        {
+            get
+            {
+                return payload;
+            }
+            set
+            {
+                Buffer.BlockCopy(value, 0, payload, 0, value.Length); // DeepCopy
+            }
+        }
+        public void SetHeader(ushort identifier, ushort seqenceNumber)
+        {
+            header.Type = (byte)8;
+            header.Code = 0;
+            // ↓ like in UDP, just initialized to zero, will get meaningful when ipv4 header is prepared.
+            header.Checksum = 0; 
+            header.Id = identifier;
+            header.Sequence = seqenceNumber;
+
+        }
+
+        /// <summary>
+        /// This routine builds the ICMP packet suitable for sending on a raw socket.
+        /// It builds the ICMP packet and payload into a byte array and computes
+        /// the checksum.
+        /// </summary>
+        /// <param name="payLoad">Data payload of the ICMP packet</param>
+        /// <returns>Byte array representing the ICMP packet and payload</returns>
+        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        {
+            byte[] icmpPacket,
+                    byteValue;
+            int offset = 0;
+
+            icmpPacket = new byte[IcmpHeader.IcmpHeaderLength + payLoad.Length];
+
+            icmpPacket[offset++] = header.Type;
+            icmpPacket[offset++] = header.Code;
+            icmpPacket[offset++] = 0;          // Zero out the checksum until the packet is assembled
+            icmpPacket[offset++] = 0;
+
+            byteValue = BitConverter.GetBytes(header.IdRaw);
+            Array.Copy(byteValue, 0, icmpPacket, offset, byteValue.Length);
+            offset += byteValue.Length;
+
+            byteValue = BitConverter.GetBytes(header.SequenceRaw);
+            Array.Copy(byteValue, 0, icmpPacket, offset, byteValue.Length);
+            offset += byteValue.Length;
+
+            if (payLoad.Length > 0)
+            {
+                Array.Copy(payLoad, 0, icmpPacket, offset, payLoad.Length);
+                offset += payLoad.Length;
+            }
+
+            // Compute the checksum over the entire packet
+            header.Checksum = ComputeChecksum(icmpPacket);
+
+            // Put the checksum back into the packet
+            byteValue = BitConverter.GetBytes(header.ChecksumRaw);
+            Array.Copy(byteValue, 0, icmpPacket, 2, byteValue.Length);
+
+            return icmpPacket;
+        }
+
+
+    }
+
     class UdpPacket : ProtocolPacket
     {
         private UdpHeader header;
@@ -261,7 +351,7 @@ namespace ToyNet.IpInterface.Packet
                 Buffer.BlockCopy(value, 0, payload, 0, value.Length); // DeepCopy
             }
         }
-        public void SetHeader(ushort sourcePort, ushort destinationPort, int messageSize)
+        public void SetHeader(ushort sourcePort, ushort destinationPort, int messageSize, Ipv4Header ipv4Header)
         {
             header.SourcePort = sourcePort;
             header.DestinationPort = destinationPort;
@@ -269,53 +359,144 @@ namespace ToyNet.IpInterface.Packet
             // ↓ just initialized to zero, will get meaningful when ipv4 header is prepared.
             header.Checksum = 0;
             // ↓ Set the ipv4 header in the UDP header since it is required to calculate pseudo-header checksum
-            // header.ipv4PacketHeader = ? 
+            header.ipv4PacketHeader = ipv4Header;
+        }
+
+        /// <summary>
+        /// This method builds the byte array representation of the UDP header as it would appear
+        /// on the wire. To do this it must build the IPv4 or IPv6 pseudo header in order to
+        /// calculate the checksum on the packet. This requires knowledge of the IPv4 or IPv6 header
+        /// so one of these must be set before a UDP packet can be set. 
+        /// 
+        /// The IPv4 pseudo header consists of:
+        ///   4-byte source IP address
+        ///   4-byte destination address
+        ///   1-byte zero field
+        ///   1-byte protocol field
+        ///   2-byte UDP length
+        ///   2-byte source port
+        ///   2-byte destination port
+        ///   2-byte UDP packet length
+        ///   2-byte UDP checksum (zero)
+        ///   UDP payload (padded to the next 16-bit boundary)
+        /// The IPv6 pseudo header consists of:
+        ///   16-byte source address
+        ///   16-byte destination address
+        ///   4-byte payload length
+        ///   3-byte zero pad
+        ///   1-byte protocol value
+        ///   2-byte source port
+        ///   2-byte destination port
+        ///   2-byte UDP length
+        ///   2-byte UDP checksum (zero)
+        ///   UDP payload (padded to the next 16-bit boundary)
+        /// </summary>
+        /// <param name="payLoad">Payload that follows the UDP header</param>
+        /// <returns></returns>
+        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        {
+            byte[] udpPacket = new byte[UdpHeader.UdpHeaderLength + payLoad.Length],
+                    pseudoHeader = null,
+                    byteValue = null;
+            int offset = 0;
+
+            // Build the UDP packet first
+            byteValue = BitConverter.GetBytes(header.SourcePortRaw);
+            Array.Copy(byteValue, 0, udpPacket, offset, byteValue.Length);
+            offset += byteValue.Length;
+
+            byteValue = BitConverter.GetBytes(header.DestinationPortRaw);
+            Array.Copy(byteValue, 0, udpPacket, offset, byteValue.Length);
+            offset += byteValue.Length;
+
+            byteValue = BitConverter.GetBytes(header.LengthRaw);
+            Array.Copy(byteValue, 0, udpPacket, offset, byteValue.Length);
+            offset += byteValue.Length;
+
+            udpPacket[offset++] = 0;      // Checksum is initially zero
+            udpPacket[offset++] = 0;
+
+            // Copy payload to end of packet
+            Array.Copy(payLoad, 0, udpPacket, offset, payLoad.Length);
+
+            if (header.ipv4PacketHeader != null)
+            {
+                pseudoHeader = new byte[UdpHeader.UdpHeaderLength + 12 + payLoad.Length];
+
+                // Build the IPv4 pseudo header
+                offset = 0;
+
+                // Source address
+                byteValue = header.ipv4PacketHeader.SourceAddress.GetAddressBytes();
+                Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+                offset += byteValue.Length;
+
+                // Destination address
+                byteValue = header.ipv4PacketHeader.DestinationAddress.GetAddressBytes();
+                Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+                offset += byteValue.Length;
+
+                // 1 byte zero pad plus next header protocol value
+                pseudoHeader[offset++] = 0;
+                pseudoHeader[offset++] = header.ipv4PacketHeader.Protocol;
+
+                // Packet length
+                byteValue = BitConverter.GetBytes(header.LengthRaw);
+                Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+                offset += byteValue.Length;
+
+                // Copy the UDP packet to the end of this
+                Array.Copy(udpPacket, 0, pseudoHeader, offset, udpPacket.Length);
+
+            }
+            // else if (header.ipv6PacketHeader != null)
+            // {
+            //     uint ipv6PayloadLength;
+
+            //     pseudoHeader = new byte[UdpHeaderLength + 40 + payLoad.Length];
+
+            //     // Build the IPv6 pseudo header
+            //     offset = 0;
+
+            //     // Source address
+            //     byteValue = ipv6PacketHeader.SourceAddress.GetAddressBytes();
+            //     Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+            //     offset += byteValue.Length;
+
+            //     // Destination address
+            //     byteValue = ipv6PacketHeader.DestinationAddress.GetAddressBytes();
+            //     Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+            //     offset += byteValue.Length;
+
+            //     ipv6PayloadLength = (uint)IPAddress.HostToNetworkOrder((int)(payLoad.Length + UdpHeaderLength));
+
+            //     // Packet payload: ICMPv6 headers plus payload
+            //     byteValue = BitConverter.GetBytes(ipv6PayloadLength);
+            //     Array.Copy(byteValue, 0, pseudoHeader, offset, byteValue.Length);
+            //     offset += byteValue.Length;
+
+            //     // 3 bytes zero pad plus next header protocol value
+            //     pseudoHeader[offset++] = 0;
+            //     pseudoHeader[offset++] = 0;
+            //     pseudoHeader[offset++] = 0;
+            //     pseudoHeader[offset++] = ipv6PacketHeader.NextHeader;
+
+            //     // Copy the UDP packet to the end of this
+            //     Array.Copy(udpPacket, 0, pseudoHeader, offset, udpPacket.Length);
+            // }
+
+            if (pseudoHeader != null)
+            {
+                header.Checksum = ComputeChecksum(pseudoHeader);
+            }
+
+            // Put checksum back into packet
+            byteValue = BitConverter.GetBytes(header.ChecksumRaw);
+            Array.Copy(byteValue, 0, udpPacket, 6, byteValue.Length);
+
+            return udpPacket;
         }
 
     }
 
-    class IcmpPacket : ProtocalPacket
-    {
-        private IcmpHeader header;
-        private byte[] payload;
-        public IcmpPacket()
-        {
-            header = new IcmpHeader();
-            payload = new byte[128]; // Default to be zero
-        }
-        public IcmpHeader Header
-        {
-            get
-            {
-                return header;
-            }
-            set
-            {
-                header = value;
-            }
-        }
-
-        public byte[] Payload
-        {
-            get
-            {
-                return payload;
-            }
-            set
-            {
-                Buffer.BlockCopy(value, 0, payload, 0, value.Length); // DeepCopy
-            }
-        }
-        public void SetHeader(ushort sourcePort, ushort destinationPort, int messageSize)
-        {
-            header.SourcePort = sourcePort;
-            header.DestinationPort = destinationPort;
-            header.Length = (ushort) (UdpHeader.UdpHeaderLength + messageSize);
-            // ↓ just initialized to zero, will get meaningful when ipv4 header is prepared.
-            header.Checksum = 0;
-            // ↓ Set the ipv4 header in the UDP header since it is required to calculate pseudo-header checksum
-            // header.ipv4PacketHeader = ? 
-        }
-
-    }
 }

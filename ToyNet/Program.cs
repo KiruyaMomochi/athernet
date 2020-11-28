@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using ToyNet.IpInterface.Header;
+using ToyNet.IpInterface.Packet;
 // using System.Data;
 // using System.Diagnostics;
 namespace ToyNet
