@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace RawSocket
 {
@@ -9,7 +10,7 @@ namespace RawSocket
     {
         static void Main(string[] args)
         {
-            Send("1.1.1.1", 1454);
+            Receive("10.20.84.220", 10087);
         }
 
         private static void Send(string hostname, int port)
@@ -25,18 +26,21 @@ namespace RawSocket
                 udpClient.Send(bytes, bytes.Length, hostname, port);
             }, null, 0, 1000);
 
-            while (true){}
+            while (true) { }
 
-            udpClient.Close();
+            //udpClient.Close();
         }
 
-        private static byte[] Receive(string hostname, int port)
+        private static void Receive(string hostname, int port)
         {
             var udpClient = new UdpClient(port);
             var remoteIpEndpoint = new IPEndPoint(IPAddress.Parse(hostname), port);
-            var receivedBytes = udpClient.Receive(ref remoteIpEndpoint);
-            udpClient.Close();
-            return receivedBytes;
+            while (true)
+            {
+                var receivedBytes = udpClient.Receive(ref remoteIpEndpoint);
+                Console.WriteLine($"Received {BitConverter.ToString(receivedBytes)} from {remoteIpEndpoint}");
+            }
+            //udpClient.Close();
         }
     }
 }
