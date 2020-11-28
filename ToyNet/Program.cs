@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using ToyNet.IpInterface.Header;
 using ToyNet.IpInterface.Packet;
 // using System.Data;
 // using System.Diagnostics;
@@ -11,12 +10,12 @@ namespace ToyNet
     {
         static void Main(string[] args)
         { 
-            int AddressType = 4;
-            string HostIpv4Address = Dns.GetHostEntry(Dns.GetHostName()).AddressList[AddressType].ToString();
+            var addressType = 4;
+            var hostIpv4Address = Dns.GetHostEntry(Dns.GetHostName()).AddressList[addressType].ToString();
             
-            string SrcIpv4Address = HostIpv4Address;
-            string DestIpv4Address = Dns.GetHostEntry("www.baidu.com").AddressList[0].ToString();
-            Console.WriteLine($"{SrcIpv4Address}->{DestIpv4Address}");
+            var srcIpv4Address = hostIpv4Address;
+            var destIpv4Address = Dns.GetHostEntry("www.baidu.com").AddressList[0].ToString();
+            Console.WriteLine($"{srcIpv4Address}->{destIpv4Address}");
             
         }
     }
