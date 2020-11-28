@@ -8,6 +8,6 @@ namespace Athernet.MacLayer
         MacpingReq,
         // ReSharper disable once IdentifierTypo
         MacpingReply,
-        ReTrans
+        Nack
     }
 }

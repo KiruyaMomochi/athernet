@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Athernet.MacLayer
 {
-    public class BackoffHandler
+    public class BackOffHandler
     {
         public int Collisions { get; set; }
         public int Scale = 1;

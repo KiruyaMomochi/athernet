@@ -136,7 +136,7 @@ namespace Athernet.Utils
             var buffer = new byte[100];
             EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             //icmpListener.SendTo(new byte[32], (EndPoint)(new IPEndPoint(IPAddress.Parse("10.20.216.184"), 0)));
-            Console.WriteLine("Transfered.");
+            Console.WriteLine("Transferred.");
 
             while (true)
             {
@@ -146,7 +146,7 @@ namespace Athernet.Utils
                 Console.WriteLine(BitConverter.ToString(buffer));
             }
         }
-        private static Random random = new Random();
+        private static readonly Random random = new Random();
 
         public static byte[] GeneratePayload(int payloadBytes)
         {
@@ -289,7 +289,7 @@ namespace Athernet.Utils
 
             var w = new WaveOutEvent
             {
-                DeviceNumber = 1
+                DeviceNumber = 0
             };
             w.Init(new MonoRawSampleProvider(samples));
             w.Play();

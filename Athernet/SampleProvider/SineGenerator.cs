@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using NAudio.Wave;
 
 namespace Athernet.SampleProvider
@@ -13,6 +14,9 @@ namespace Athernet.SampleProvider
         public SineGenerator() : this(48000, 1) { }
         public SineGenerator(int sampleRate, int channel)
         {
+            Debug.Assert(sampleRate != 0);
+            Debug.Assert(channel != 0);
+
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channel);
 
             // Default

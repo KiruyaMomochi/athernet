@@ -1,17 +1,9 @@
-﻿using NAudio.Wave;
-using System;
-using System.Collections;
+﻿using System;
 using System.Diagnostics;
-using Athernet.Modulators;
-using Athernet.Preambles.PreambleBuilders;
-using System.Threading;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using Athernet.MacLayer;
 using Athernet.PhysicalLayer;
-using NAudio.Wave.SampleProviders;
-using Debug = Athernet.Utils.Debug;
 
 namespace AthernetCLI
 {
@@ -22,46 +14,31 @@ namespace AthernetCLI
             Athernet.Utils.Audio.ListDevices();
 
             // Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
-            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var watch = Stopwatch.StartNew();
 
-            var o = DoTask(@"C:\Users\xtyzw\OneDrive - shanghaitech.edu.cn\CS120_ComputerNetworks\Project\Project 2\INPUT.bin", 6500);
+            // ReSharper disable twice StringLiteralTypo
+            var o = DoTask(@"C:\Users\xtyzw\OneDrive - shanghaitech.edu.cn\CS120_ComputerNetworks\Project\Project 2\INPUT.bin");
             var outFile = new FileInfo(@"C:\Users\xtyzw\OneDrive - shanghaitech.edu.cn\CS120_ComputerNetworks\Project\Project 2\OUTPUT.bin");
 
             watch.Stop();
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
 
-        private static byte[] DoTask(string fileName, int payloadBytes = 500)
+        private static byte[] DoTask(string fileName, int payloadBytes = 16)
         {
             var file = new FileInfo(fileName);
-            var o = new byte[6250];
-            var offset = 0;
-            
-            var node1 = new Mac(1, payloadBytes, 0, 0);
-            var node2 = new Mac(2, payloadBytes, 3, 2);
-            
-            node1.StartReceive();
+
+            var node1 = new Physical(2, 1, payloadBytes);
+            var node2 = new Physical(1, 2, payloadBytes);
+
             node2.StartReceive();
 
-            node2.DataAvailable += (sender, eventArgs) =>
-            {
-                var rem = 6250 - offset;
-                Buffer.BlockCopy(eventArgs.Data, 0, o, offset, Math.Min(rem, eventArgs.Data.Length));
-                offset += payloadBytes;
-            };
+            var buffer = new byte[payloadBytes];
+            //Array.Fill<byte>(buffer, 255);
 
-            var buffer = new byte[6250];
-            file.OpenRead().Read(buffer);
-
-            for (int i = 0; i < buffer.Length; i += payloadBytes)
-            {
-                var s = buffer.Skip(i).Take(payloadBytes).ToArray();
-                var b = s.Concat(new byte[payloadBytes - s.Length]).ToArray();
-
-                node1.AddPayload(2, b);
-            }
-            
-            Console.WriteLine($"Input == Output: {o.SequenceEqual(buffer)}");
+            //file.OpenRead().Read(buffer);
+            node1.AddPayload(buffer);
+            Thread.Sleep(1000000000);
             return null;
         }
     }

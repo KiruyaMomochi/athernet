@@ -2,37 +2,29 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using Athernet.Demodulator;
 using Athernet.PhysicalLayer;
-using Athernet.PreambleBuilder;
 
 namespace Athernet.MacLayer
 {
+    /// <summary>
+    /// The MAC layer.
+    /// </summary>
+    /// <remarks>
+    /// Neither the MAC layer nor the Physics layer will do split for you.
+    /// </remarks>
     public class Mac
     {
         public byte Address { get; }
 
-        public int PayloadBytes
-        {
-            get => _physical.PayloadBytes - 3;
-            set => _physical.PayloadBytes = value + 3;
-        }
+        public int MaxDataBytes => _physical.MaxDataBytes;
 
         public bool SendAck { get; set; } = true;
         public bool NeedAck { get; set; } = true;
 
         public bool SendReTrans { get; set; } = false;
 
-
-        public int PlayDeviceNumber
-        {
-            get => _physical.PlayDeviceNumber;
-        }
-
-        public int RecordDeviceNumber
-        {
-            get => _physical.RecordDeviceNumber;
-        }
+        public int PlayDeviceNumber => _physical.PlayDeviceNumber;
+        public int RecordDeviceNumber => _physical.RecordDeviceNumber;
 
         private readonly Physical _physical;
 
@@ -56,6 +48,17 @@ namespace Athernet.MacLayer
             Address = address;
             _physical = physical;
             // _ackFrame = new byte[PayloadBytes];
+            SubscribePhysical();
+        }
+
+        public Mac(byte address, int playDeviceNumber = 0, int recordDeviceNumber = 0, int maxDataBytes = 1000)
+        {
+            _physical = new Physical(playDeviceNumber, recordDeviceNumber, maxDataBytes);
+            Address = address;
+        }
+
+        private void SubscribePhysical()
+        {
             _physical.DataAvailable += PhysicalOnDataAvailable;
             _physical.PacketDetected += (sender, args) =>
             {
@@ -76,22 +79,7 @@ namespace Athernet.MacLayer
             };
         }
 
-        public Mac(byte address, int payloadBytes, DpskModulator modulator, int playDeviceNumber = 0,
-            int recordDeviceNumber = 0) :
-            this(address, new Physical(payloadBytes + 3, modulator, playDeviceNumber, recordDeviceNumber)
-            { Preamble = new WuPreambleBuilder(modulator.SampleRate, 0.015f).Build() })
-        {
-        }
-
-        public Mac(byte address, int payloadBytes, int playDeviceNumber = 0, int recordDeviceNumber = 0,
-            int sampleRate = 48000) :
-            this(address, payloadBytes, new DpskModulator(sampleRate, 8000) { BitDepth = 3 }, playDeviceNumber,
-                recordDeviceNumber)
-        {
-            Address = address;
-        }
-
-        private void PhysicalOnDataAvailable(object sender, PhysicalLayer.DataAvailableEventArgs e)
+        private void PhysicalOnDataAvailable(object sender, PhysicalLayer.Receive.DataAvailableEventArgs e)
         {
             if (e.Data.Length == 0)
             {
@@ -139,20 +127,22 @@ namespace Athernet.MacLayer
                 case MacType.MacpingReply:
                     _pingEwh.Set();
                     break;
-                case MacType.ReTrans when SendReTrans:
+                case MacType.Nack when SendReTrans:
                     _ackFrame = frame.Frame;
                     _ackEwh.Set();
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
         public void AddPayload(byte dest, byte[] payload)
         {
-            if (payload.Length != PayloadBytes)
-                throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
+            if (payload.Length >= MaxDataBytes)
+                throw new InvalidDataException($"bytes have length of {payload.Length}, should be not greater than {MaxDataBytes}");
 
             var frame = new MacFrame(dest, Address, MacType.Data, payload);
-            var failcnt = 0;
+            var failCount = 0;
             
             while (true)
             {
@@ -168,7 +158,7 @@ namespace Athernet.MacLayer
                 if (_ackEwh.WaitOne(AckTimeout))
                     return;
 
-                if (failcnt++ >= 5)
+                if (failCount++ >= 5)
                 {
                     throw new ApplicationException("Link error");
                 }
@@ -180,11 +170,11 @@ namespace Athernet.MacLayer
         //{
         //    while (!_physical.ChannelFree)
         //    {
-        //        var waitTime = _backoff.Wait();
+        //        var waitTime = _backOff.Wait();
         //        Console.WriteLine($"Mb{Address} Wait {waitTime} times");
         //    }
 
-        //    _backoff.Reset();
+        //    _backOff.Reset();
         //}
 
         private void AddData(MacFrame macFrame)
@@ -205,10 +195,11 @@ namespace Athernet.MacLayer
             _physical.AddPayload(macFrame);
         }
 
-        private BackoffHandler _backoff = new BackoffHandler();
+        private BackOffHandler _backOff = new BackOffHandler();
         private static byte[] _zeroPayload = new byte[0];
 
-        public int AckTimeout => _physical.FrameSamples / 48 + 600;
+        // TODO: change timeout
+        public int AckTimeout => _physical.MaxDataBytes + 600;
 
         private void SendPing(byte dest)
         {
@@ -241,7 +232,7 @@ namespace Athernet.MacLayer
         private void ReplyWithReTrans(in MacFrame frame)
         {
             //Backoff();
-            AddData(frame.Src, frame.Dest, MacType.ReTrans, frame.Payload);
+            AddData(frame.Src, frame.Dest, MacType.Nack, frame.Payload);
         }
 
         public void StartReceive() => _physical.StartReceive();
