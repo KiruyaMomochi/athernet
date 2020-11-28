@@ -14,7 +14,7 @@ namespace ToyNet.IpInterface.Header
     /// checksums on packets.
     /// 
     /// </summary>
-    abstract class ProtocolHeader
+    internal abstract class ProtocolHeader
     {
         /// <summary>
         /// This abstracted method returns a byte array that is the protocl

@@ -5,7 +5,7 @@ using ToyNet.IpInterface.Header;
 
 namespace ToyNet.IpInterface.Packet
 {
-    class Ipv4Packet : ProtocolPacket
+    internal class Ipv4Packet : ProtocolPacket
     {
         private Ipv4Header _header;
         private byte[] _payload;

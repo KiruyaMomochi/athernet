@@ -6,7 +6,7 @@ using ToyNet.IpInterface.Header;
 
 namespace ToyNet.IpInterface.Packet
 {
-    abstract class ProtocolPacket
+    internal abstract class ProtocolPacket
     {
         /// <summary>
         /// This method builds the entire packet to be sent on the socket. It takes

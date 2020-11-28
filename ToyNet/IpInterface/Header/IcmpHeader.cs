@@ -8,7 +8,7 @@ namespace ToyNet.IpInterface.Header
     /// <summary>
     /// The ICMP protocol header used with the IPv4 protocol.
     /// </summary>
-    class IcmpHeader
+    internal class IcmpHeader: ProtocolHeader
     {
         private byte _icmpType;                   // ICMP message type
         private byte _icmpCode;                   // ICMP message code

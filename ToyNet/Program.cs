@@ -6,9 +6,9 @@ using ToyNet.IpInterface.Packet;
 // using System.Diagnostics;
 namespace ToyNet
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         { 
             var addressType = 4;
             var hostIpv4Address = Dns.GetHostEntry(Dns.GetHostName()).AddressList[addressType].ToString();

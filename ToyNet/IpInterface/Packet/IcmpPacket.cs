@@ -4,7 +4,7 @@ using ToyNet.IpInterface.Header;
 
 namespace ToyNet.IpInterface.Packet
 {
-    class IcmpPacket : ProtocolPacket
+    internal class IcmpPacket : ProtocolPacket
     {
         private IcmpHeader _header = new();
         private readonly byte[] _payload = new byte[128];

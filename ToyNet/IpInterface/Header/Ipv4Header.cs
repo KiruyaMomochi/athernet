@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 
 namespace ToyNet.IpInterface.Header
@@ -6,7 +7,7 @@ namespace ToyNet.IpInterface.Header
     /// <summary>
     /// This is the IPv4 protocol header.
     /// </summary>
-    class Ipv4Header
+    internal class Ipv4Header: ProtocolHeader
     {
         private ushort _ipId;
         private ushort _ipChecksum;
@@ -19,13 +20,13 @@ namespace ToyNet.IpInterface.Header
         public Ipv4Header() : base()
         {
             Version = 4;
-            LengthRaw = (byte)Ipv4HeaderLength;    // Set the property so it will convert properly
+            Length = (byte)Ipv4HeaderLength;    // Set the property so it will convert properly
             TypeOfService = 0;
-            _ipId = 0;
+            Id = 0;
             OffsetRaw = 0;
             Ttl = 1;
             Protocol = 0;
-            _ipChecksum = 0;
+            Checksum = 0;
             SourceAddress = IPAddress.Any;
             DestinationAddress = IPAddress.Any;
         }
@@ -42,14 +43,14 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public byte Length
         {
-            get => (byte)(LengthRaw * 4);
-            set => LengthRaw = (byte)(value / 4);
+            get => (byte)(_lengthRaw << 4);
+            set => _lengthRaw = (byte)(value >> 4);
         }
 
         /// <summary>
         /// Gets the RAW length of the IPv4 header.
         /// </summary>
-        public byte LengthRaw { get; private set; }
+        private byte _lengthRaw;
 
         /// <summary>
         /// Gets and sets the type of service field of the IPv4 header. Since it
@@ -126,17 +127,9 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort Checksum
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)_ipChecksum);
-            set => _ipChecksum = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort)IPAddress.NetworkToHostOrder(_ipChecksum);
+            set => _ipChecksum = (ushort)IPAddress.HostToNetworkOrder(value);
         }
-
-        /// <summary>
-        /// [NO ORDER CONVERSION] Gets the RAW checksum field of the IPv4 header. For the IPv4 header, the 
-        /// checksum is calculated over the header and payload. Note that this field isn't
-        /// meant to be set by the user as the GetProtocolPacketBytes method computes the
-        /// checksum when the packet is built.
-        /// </summary>
-        public ushort ChecksumRaw => _ipChecksum;
 
         /// <summary>
         /// Gets and sets the source IP address of the IPv4 packet. This is stored
@@ -171,7 +164,7 @@ namespace ToyNet.IpInterface.Header
 
             // Decode the data in the array back into the class properties
             ipv4Header.Version = (byte)((ipv4Packet[0] >> 4) & 0xF);
-            ipv4Header.LengthRaw = (byte)(ipv4Packet[0] & 0xF);
+            ipv4Header._lengthRaw = (byte)(ipv4Packet[0] & 0xF);
             ipv4Header.TypeOfService = ipv4Packet[1];
             ipv4Header.TotalLengthRaw = BitConverter.ToUInt16(ipv4Packet, 2);
             ipv4Header._ipId = BitConverter.ToUInt16(ipv4Packet, 4);
@@ -196,53 +189,33 @@ namespace ToyNet.IpInterface.Header
         /// <returns>A byte array of the IPv4 header and payload</returns>
         public override byte[] GetProtocolPacketBytes(byte[] payLoad)
         {
-            byte[] ipv4Packet,
-                byteValue;
             var index = 0;
 
             // Allocate space for the IPv4 header plus payload
-            ipv4Packet = new byte[Ipv4Header.Ipv4HeaderLength + payLoad.Length];
+            var ipv4Packet = new byte[Ipv4HeaderLength + payLoad.Length];
+            var memoryStream = new MemoryStream(ipv4Packet);
 
-            ipv4Packet[index++] = (byte)((Version << 4) | LengthRaw);
-            ipv4Packet[index++] = TypeOfService;
+            memoryStream.WriteByte((byte)((Version << 4) | _lengthRaw));
+            memoryStream.WriteByte(TypeOfService);
+            memoryStream.Write(BitConverter.GetBytes(TotalLengthRaw));
+            memoryStream.Write(BitConverter.GetBytes(IdRaw));
+            memoryStream.Write(BitConverter.GetBytes(OffsetRaw));
 
-            byteValue = BitConverter.GetBytes(TotalLengthRaw);
-            Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
-            index += byteValue.Length;
+            memoryStream.WriteByte(Ttl);
+            memoryStream.WriteByte(Protocol);
+            memoryStream.WriteByte(0); // Zero the checksum for now since we will
+            memoryStream.WriteByte(0); // calculate it later
 
-            byteValue = BitConverter.GetBytes(IdRaw);
-            Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
-            index += byteValue.Length;
+            memoryStream.Write(SourceAddress.GetAddressBytes());
+            memoryStream.Write(DestinationAddress.GetAddressBytes());
 
-            byteValue = BitConverter.GetBytes(OffsetRaw);
-            Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
-            index += byteValue.Length;
-
-            ipv4Packet[index++] = Ttl;
-            ipv4Packet[index++] = Protocol;
-            ipv4Packet[index++] = 0; // Zero the checksum for now since we will
-            ipv4Packet[index++] = 0; // calculate it later
-
-            // Copy the source address
-            byteValue = SourceAddress.GetAddressBytes();
-            Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
-            index += byteValue.Length;
-
-            // Copy the destination address
-            byteValue = DestinationAddress.GetAddressBytes();
-            Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
-            index += byteValue.Length;
-
-            // Copy the payload
-            Array.Copy(payLoad, 0, ipv4Packet, index, payLoad.Length);
-            index += payLoad.Length;
-
+            memoryStream.WriteByte((byte)((Version << 4) | _lengthRaw));
+            
             // Compute the checksum over the entire packet (IPv4 header + payload)
             Checksum = ComputeChecksum(ipv4Packet);
 
             // Set the checksum into the built packet
-            byteValue = BitConverter.GetBytes(ChecksumRaw);
-            Array.Copy(byteValue, 0, ipv4Packet, 10, byteValue.Length);
+            memoryStream.Write(BitConverter.GetBytes(_ipChecksum));
 
             return ipv4Packet;
         }
