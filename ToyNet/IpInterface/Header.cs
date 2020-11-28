@@ -200,6 +200,16 @@ namespace ToyNet.IpInterface.Header
         }
 
         /// <summary>
+        /// Gets the RAW length of the IPv4 header.
+        /// </summary>
+        public byte LengthRaw
+        {
+            get
+            {
+                return (byte)ipLength;
+            }
+        }
+        /// <summary>
         /// Gets and sets the type of service field of the IPv4 header. Since it
         /// is a byte, no byte order conversion is required.
         /// </summary>
@@ -232,6 +242,18 @@ namespace ToyNet.IpInterface.Header
         }
 
         /// <summary>
+        ///  [NO ORDER CONVERSION] Gets the RAW total length of the IPv4 header and its encapsulated
+        ///  payload. Byte order conversion is NOT required.
+        /// </summary>
+        public ushort TotalLengthRaw
+        {
+            get
+            {
+                return ipTotalLength;
+            }
+        }
+
+        /// <summary>
         /// Gets and sets the ID field of the IPv4 header. Byte order conversion is
         /// requried.
         /// </summary>
@@ -248,6 +270,18 @@ namespace ToyNet.IpInterface.Header
         }
 
         /// <summary>
+        /// Gets and sets the ID field of the IPv4 header. Byte order conversion is
+        /// requried.
+        /// </summary>
+        public ushort IdRaw
+        {
+            get
+            {
+                return (ushort)ipId;
+            }
+        }       
+
+        /// <summary>
         /// Gets and sets the offset field of the IPv4 header which indicates if
         /// IP fragmentation has occured.
         /// </summary>
@@ -262,6 +296,19 @@ namespace ToyNet.IpInterface.Header
                 ipOffset = (ushort)IPAddress.HostToNetworkOrder((short)value);
             }
         }
+
+        /// <summary>
+        /// [NO ORDER CONVERSION] Gets the offset field of the IPv4 header which indicates if
+        /// IP fragmentation has occured.
+        /// </summary>
+        public ushort OffsetRaw
+        {
+            get
+            {
+                return ipOffset;
+            }
+        }
+
 
         /// <summary>
         /// Gets and sets the time-to-live (TTL) value of the IP header. This field
@@ -310,6 +357,20 @@ namespace ToyNet.IpInterface.Header
             set
             {
                 ipChecksum = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            }
+        }
+
+        /// <summary>
+        /// [NO ORDER CONVERSION] Gets the RAW checksum field of the IPv4 header. For the IPv4 header, the 
+        /// checksum is calculated over the header and payload. Note that this field isn't
+        /// meant to be set by the user as the GetProtocolPacketBytes method computes the
+        /// checksum when the packet is built.
+        /// </summary>
+        public ushort ChecksumRaw
+        {
+            get
+            {
+                return (ushort)ipChecksum;
             }
         }
 
@@ -594,44 +655,44 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         /// <param name="payLoad">Data encapsulated by the IPv6 header</param>
         /// <returns>Byte array of the IPv6 packet and payload</returns>
-        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
-        {
-            byte[] byteValue,
-                    ipv6Packet;
-            int offset = 0;
+        // public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        // {
+        //     byte[] byteValue,
+        //             ipv6Packet;
+        //     int offset = 0;
 
-            ipv6Packet = new byte[Ipv6HeaderLength + payLoad.Length];
+        //     ipv6Packet = new byte[Ipv6HeaderLength + payLoad.Length];
 
-            ipv6Packet[offset++] = (byte)((ipVersion << 4) | ((ipTrafficClass >> 4) & 0xF));
+        //     ipv6Packet[offset++] = (byte)((ipVersion << 4) | ((ipTrafficClass >> 4) & 0xF));
 
-            //tmpbyte1 = (byte) ( ( ipTrafficClass << 4) & 0xF0);
-            //tmpbyte2 = (byte) ( ( ipFlow >> 16 ) & 0xF );
+        //     //tmpbyte1 = (byte) ( ( ipTrafficClass << 4) & 0xF0);
+        //     //tmpbyte2 = (byte) ( ( ipFlow >> 16 ) & 0xF );
 
-            ipv6Packet[offset++] = (byte)((uint)((ipTrafficClass << 4) & 0xF0) | (uint)((Flow >> 16) & 0xF));
-            ipv6Packet[offset++] = (byte)((Flow >> 8) & 0xFF);
-            ipv6Packet[offset++] = (byte)(Flow & 0xFF);
+        //     ipv6Packet[offset++] = (byte)((uint)((ipTrafficClass << 4) & 0xF0) | (uint)((Flow >> 16) & 0xF));
+        //     ipv6Packet[offset++] = (byte)((Flow >> 8) & 0xFF);
+        //     ipv6Packet[offset++] = (byte)(Flow & 0xFF);
 
-            Console.WriteLine("Next header = {0}", ipNextHeader);
+        //     Console.WriteLine("Next header = {0}", ipNextHeader);
 
-            byteValue = BitConverter.GetBytes(ipPayloadLength);
-            Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
-            offset += byteValue.Length;
+        //     byteValue = BitConverter.GetBytes(ipPayloadLength);
+        //     Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
+        //     offset += byteValue.Length;
 
-            ipv6Packet[offset++] = (byte)ipNextHeader;
-            ipv6Packet[offset++] = (byte)ipHopLimit;
+        //     ipv6Packet[offset++] = (byte)ipNextHeader;
+        //     ipv6Packet[offset++] = (byte)ipHopLimit;
 
-            byteValue = ipSourceAddress.GetAddressBytes();
-            Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
-            offset += byteValue.Length;
+        //     byteValue = ipSourceAddress.GetAddressBytes();
+        //     Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
+        //     offset += byteValue.Length;
 
-            byteValue = ipDestinationAddress.GetAddressBytes();
-            Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
-            offset += byteValue.Length;
+        //     byteValue = ipDestinationAddress.GetAddressBytes();
+        //     Array.Copy(byteValue, 0, ipv6Packet, offset, byteValue.Length);
+        //     offset += byteValue.Length;
 
-            Array.Copy(payLoad, 0, ipv6Packet, offset, payLoad.Length);
+        //     Array.Copy(payLoad, 0, ipv6Packet, offset, payLoad.Length);
 
-            return ipv6Packet;
-        }
+        //     return ipv6Packet;
+        // }
     }
 
     /// <summary>

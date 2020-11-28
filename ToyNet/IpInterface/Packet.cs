@@ -183,18 +183,18 @@ namespace ToyNet.IpInterface.Packet
             // Allocate space for the IPv4 header plus payload
             ipv4Packet = new byte[Ipv4Header.Ipv4HeaderLength + payLoad.Length];
 
-            ipv4Packet[index++] = (byte)((ipVersion << 4) | ipLength);
-            ipv4Packet[index++] = ipTypeOfService;
+            ipv4Packet[index++] = (byte)((header.Version << 4) | header.LengthRaw);
+            ipv4Packet[index++] = header.TypeOfService;
 
-            byteValue = BitConverter.GetBytes(ipTotalLength);
+            byteValue = BitConverter.GetBytes(header.TotalLengthRaw);
             Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
             index += byteValue.Length;
 
-            byteValue = BitConverter.GetBytes(ipId);
+            byteValue = BitConverter.GetBytes(header.IdRaw);
             Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
             index += byteValue.Length;
 
-            byteValue = BitConverter.GetBytes(ipOffset);
+            byteValue = BitConverter.GetBytes(header.OffsetRaw);
             Array.Copy(byteValue, 0, ipv4Packet, index, byteValue.Length);
             index += byteValue.Length;
 
@@ -218,10 +218,10 @@ namespace ToyNet.IpInterface.Packet
             index += payLoad.Length;
 
             // Compute the checksum over the entire packet (IPv4 header + payload)
-            Checksum = ComputeChecksum(ipv4Packet);
+            header.Checksum = ComputeChecksum(ipv4Packet);
 
             // Set the checksum into the built packet
-            byteValue = BitConverter.GetBytes(ipChecksum);
+            byteValue = BitConverter.GetBytes(header.ChecksumRaw);
             Array.Copy(byteValue, 0, ipv4Packet, 10, byteValue.Length);
 
             return ipv4Packet;
@@ -229,7 +229,7 @@ namespace ToyNet.IpInterface.Packet
 
     }
 
-    class UdpPacket
+    class UdpPacket : ProtocolPacket
     {
         private UdpHeader header;
         private byte[] payload;
@@ -239,6 +239,51 @@ namespace ToyNet.IpInterface.Packet
             payload = new byte[128]; // Default to be zero
         }
         public UdpHeader Header
+        {
+            get
+            {
+                return header;
+            }
+            set
+            {
+                header = value;
+            }
+        }
+
+        public byte[] Payload
+        {
+            get
+            {
+                return payload;
+            }
+            set
+            {
+                Buffer.BlockCopy(value, 0, payload, 0, value.Length); // DeepCopy
+            }
+        }
+        public void SetHeader(ushort sourcePort, ushort destinationPort, int messageSize)
+        {
+            header.SourcePort = sourcePort;
+            header.DestinationPort = destinationPort;
+            header.Length = (ushort) (UdpHeader.UdpHeaderLength + messageSize);
+            // ↓ just initialized to zero, will get meaningful when ipv4 header is prepared.
+            header.Checksum = 0;
+            // ↓ Set the ipv4 header in the UDP header since it is required to calculate pseudo-header checksum
+            // header.ipv4PacketHeader = ? 
+        }
+
+    }
+
+    class IcmpPacket : ProtocalPacket
+    {
+        private IcmpHeader header;
+        private byte[] payload;
+        public IcmpPacket()
+        {
+            header = new IcmpHeader();
+            payload = new byte[128]; // Default to be zero
+        }
+        public IcmpHeader Header
         {
             get
             {
