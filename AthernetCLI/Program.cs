@@ -30,6 +30,7 @@ namespace AthernetCLI
             //
             // // ReSharper disable twice StringLiteralTypo
             Nat(IPAddress.Parse("10.20.223.177"));
+            //ReceiveUdp("10.20.200.129", null);
             Thread.Sleep(100000);
             // // SendUdp(new FileInfo(@"C:\Users\xtyzw\Downloads\A.txt"), IPAddress.Parse("10.19.200.129"));
             //SendIcmp(Dns.GetHostEntry("www.baidu.com").AddressList[0]);
@@ -82,7 +83,7 @@ namespace AthernetCLI
                         var remoteIpEndpoint = new IPEndPoint(IPAddress.Any, 6011);
 
                         var udpRec = udpClient.Receive(ref remoteIpEndpoint);
-                        Console.WriteLine(BitConverter.ToString(udpRec));
+                        //ShowBytes(remoteIpEndpoint, (udpRec));
 
                         node2.SendPacket(new Ipv4Packet(){
                             Header = new Ipv4Header
@@ -233,13 +234,27 @@ namespace AthernetCLI
 
         private static void ReceiveUdp(string source, FileInfo output)
         {
-            var udpClient = new UdpClient(10086);
-            var remoteIpEndpoint = new IPEndPoint(IPAddress.Parse(source), 10086);
+            var udpClient = new UdpClient(6011);
+            var remoteIpEndpoint = new IPEndPoint(IPAddress.Any, 6011);
 
             var receivedBytes = udpClient.Receive(ref remoteIpEndpoint);
-            ShowBytes(remoteIpEndpoint, receivedBytes);
-
-            udpClient.Send(receivedBytes, receivedBytes.Length, remoteIpEndpoint);
+           
+            node2.SendPacket(new Ipv4Packet
+            {
+                Header = new Ipv4Header
+                {
+                    SourceAddress = remoteIpEndpoint.Address,
+                    DestinationAddress = IPAddress.Parse("192.168.1.2"),
+                    Ttl = 64,
+                    Flags = 0x40
+                },
+                Payload = receivedBytes,
+                TcpHeader = new UdpHeader
+                {
+                    SourcePort = (ushort) remoteIpEndpoint.Port,
+                    DestinationPort = 6812
+                }
+            });
         }
 
         private static void SendUdp(string hostname, int port)
