@@ -26,9 +26,10 @@ namespace AthernetCLI
             var watch = Stopwatch.StartNew();
 
             // ReSharper disable twice StringLiteralTypo
-            Nat();
-            DoMacTask(new FileInfo(@"C:\Users\xtyzw\Downloads\A.txt"));
+            // Nat();
+            // DoMacTask(new FileInfo(@"C:\Users\xtyzw\Downloads\A.txt"));
 
+            IcmpTest();
             watch.Stop();
             Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
@@ -98,7 +99,7 @@ namespace AthernetCLI
                 Payload = buffer,
                 TcpHeader = new UdpHeader
                 {
-                    SourcePort = 6812,
+                    SourcePort = 6812,  
                     DestinationPort = 10086
                 }
             });
@@ -109,7 +110,7 @@ namespace AthernetCLI
         {
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
             var node1 = new Physical(2, 1, payloadBytes);
-            var node2 = new Physical(1, 2, payloadBytes);
+            var node2 = new Physical(0, 0, payloadBytes);
 
             node2.StartReceive();
 
@@ -126,6 +127,113 @@ namespace AthernetCLI
             //file.OpenRead().Read(buffer);
             node1.AddPayload(buffer);
             ewh.WaitOne();
+        }
+        
+        private static void IcmpTest()
+        {
+            var IcmpEchoPacket = new IcmpPacket() {Header = new IcmpHeader()};
+            IcmpEchoPacket.SetHeader(IcmpType.EchoRequest, 0, 114);
+            IcmpEchoPacket.Payload = new byte[32] {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6 ,7, 7, 7, 7, 8, 8, 8, 8};
+            
+            byte[] IcmpEchoByte = IcmpEchoPacket.Header.GetProtocolPacketBytes(IcmpEchoPacket.Payload);
+            var IcmpIpv4Packet = new Ipv4Packet();
+            IcmpIpv4Packet.SetHeader(IPAddress.Parse("10.20.194.230"), IPAddress.Parse("10.20.200.129"), IcmpEchoByte.Length);
+
+            byte[] BuiltPacket = PacketBuilder.BuildPacket(IcmpIpv4Packet.Header, IcmpEchoPacket.Header, IcmpEchoPacket.Payload);
+            
+            int j = 0;
+            foreach (byte i in BuiltPacket)
+            {
+                Console.Write("{0:X2} ", i);
+                j++;
+                if (j % 2 == 0) Console.Write(" ");
+                if (j % 16 == 0) Console.Write("\n");
+            }
+
+            SendSignal(BuiltPacket, IPAddress.Parse("10.20.200.129"), 10086);
+            
+        }
+
+        private static void SendSignal(byte [] builtPacket, IPAddress destAddress, int destPort)
+        {
+            // Create connection
+            var rawSocket = new Socket(
+                destAddress.AddressFamily,
+                SocketType.Raw,
+                ProtocolType.Raw
+            );
+
+            // Bind the socket to the interface specified
+            IPAddress bindAddress = IPAddress.Any;
+            rawSocket.Bind( new IPEndPoint( bindAddress, 0 ) );
+
+            // Set the HeaderIncluded option since we include the IP header
+            SocketOptionLevel socketLevel = SocketOptionLevel.IP;
+            rawSocket.SetSocketOption( socketLevel, SocketOptionName.HeaderIncluded, 1 );
+            try
+            {
+                // Send the packet!
+                int sendCount = 114514; // 自己指定
+                for (int i = 0; i < sendCount; i++)
+                {
+                    int rc = rawSocket.SendTo(builtPacket, new IPEndPoint(destAddress, destPort));
+                    Thread.Sleep(1000);
+                    Console.WriteLine($"Sent {i} packets!");
+                }
+            }
+            catch (SocketException err)
+            {
+                Console.WriteLine("Socket error occured: {0}", err.Message);
+                // http://msdn.microsoft.com/en-us/library/ms740668.aspx
+            }
+            finally
+            {
+                // Close the socket
+                Console.WriteLine("Closing the socket...");
+                rawSocket.Close();
+            }
+
+        }
+        private static void ReceiveSignal(byte [] builtPacket, IPAddress destAddress, int destPort)
+        {
+            var rawSocket = new Socket(
+                destAddress.AddressFamily,
+                SocketType.Raw,
+                ProtocolType.Raw
+            );
+
+            // Bind the socket to the interface specified
+            IPAddress bindAddress = IPAddress.Any;
+            rawSocket.Bind( new IPEndPoint( bindAddress, 0 ) );
+
+            // Set the HeaderIncluded option since we include the IP header
+            SocketOptionLevel socketLevel = SocketOptionLevel.IP;
+            rawSocket.SetSocketOption( socketLevel, SocketOptionName.HeaderIncluded, 1 );
+
+            
+            try
+            {
+                // Send the packet!
+                int sendCount = 114514; // 自己指定
+                for (int i = 0; i < sendCount; i++)
+                {
+                    int rc = rawSocket.SendTo(builtPacket, new IPEndPoint(destAddress, destPort));
+                    Thread.Sleep(1000);
+                    Console.WriteLine($"Sent {i} packets!");
+                    // byteCount = rawSocket.ReceiveFrom()
+                }
+            }
+            catch (SocketException err)
+            {
+                Console.WriteLine("Socket error occured: {0}", err.Message);
+                // http://msdn.microsoft.com/en-us/library/ms740668.aspx
+            }
+            finally
+            {
+                // Close the socket
+                Console.WriteLine("Closing the socket...");
+                rawSocket.Close();
+            }
         }
     }
 }
