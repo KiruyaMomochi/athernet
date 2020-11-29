@@ -30,7 +30,7 @@ namespace AthernetTest.PhysicalTest
                 BufferLength = 4800000
             };
 
-            var data = new byte[1000];
+            var data = new byte[12];
             new Random().NextBytes(data);
             
             transmitter.AddPayload(data);

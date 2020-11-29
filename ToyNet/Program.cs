@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Net.Sockets;
-using ToyNet.IpInterface.Packet;
 // using System.Data;
 // using System.Diagnostics;
 namespace ToyNet
@@ -16,7 +14,6 @@ namespace ToyNet
             var srcIpv4Address = hostIpv4Address;
             var destIpv4Address = Dns.GetHostEntry("www.baidu.com").AddressList[0].ToString();
             Console.WriteLine($"{srcIpv4Address}->{destIpv4Address}");
-            
         }
     }
 }

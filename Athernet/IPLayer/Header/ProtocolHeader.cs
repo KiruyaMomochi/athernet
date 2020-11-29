@@ -1,10 +1,9 @@
-using System.Net.Sockets;
-using System.Collections;
+
 
 // CREDIT: This namespace is modified based from the following source:
 // https://www.winsocketdotnetworkprogramming.com/clientserversocketnetworkcommunication8chap.html
 
-namespace ToyNet.IpInterface.Header
+namespace Athernet.IPLayer.Header
 {
     /// <summary>
     /// The ProtocolHeader class is the base class for all protocol header classes.
@@ -14,19 +13,9 @@ namespace ToyNet.IpInterface.Header
     /// checksums on packets.
     /// 
     /// </summary>
-    internal abstract class ProtocolHeader
+    public abstract class ProtocolHeader
     {
-        /// <summary>
-        /// This abstracted method returns a byte array that is the protocl
-        /// header and the payload. This is used by teh BuildPacket method
-        /// to build the entire packet which may consist of multiple headers
-        /// and data payload.
-        /// </summary>
-        /// <param name="payLoad">The byte array of the data encapsulated in this header</param>
-        /// <returns>A byte array of the serialized header and payload</returns>
-        public abstract byte[] GetProtocolPacketBytes(
-            byte[] payLoad
-        );
+        public abstract int HeaderLength { get; }    // Length of header
 
         /// <summary>
         /// This is a simple method for computing the 16-bit one's complement
@@ -35,7 +24,7 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         /// <param name="payLoad">Byte array to compute checksum over</param>
         /// <returns></returns>
-        public static ushort ComputeChecksum(byte[] payLoad)
+        protected static ushort ComputeChecksum(byte[] payLoad)
         {
             uint xsum = 0;
             ushort shortval = 0;
@@ -54,7 +43,7 @@ namespace ToyNet.IpInterface.Header
             // Pad if necessary
             if (payLoad.Length % 2 != 0)
             {
-                xsum += payLoad[^1];
+                xsum += (ushort)(payLoad[^1] << 8);
             }
 
             xsum = (xsum >> 16) + (xsum & 0xFFFF);

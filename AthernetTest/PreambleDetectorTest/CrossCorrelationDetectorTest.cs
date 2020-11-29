@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Receive.PreambleDetector;
-using Athernet.PreambleBuilder;
 using Xunit;
 
 namespace AthernetTest.PreambleDetectorTest

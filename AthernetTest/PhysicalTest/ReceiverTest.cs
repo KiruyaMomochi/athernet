@@ -5,7 +5,6 @@ using System.Linq;
 using Athernet.PhysicalLayer.Receive;
 using Athernet.PhysicalLayer.Receive.Rx;
 using Athernet.PhysicalLayer.Transmit.Modulator;
-using Athernet.PreambleBuilder;
 using Athernet.Utils;
 using NAudio.Wave.SampleProviders;
 using Xunit;

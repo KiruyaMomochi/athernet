@@ -1,29 +1,30 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 
-namespace ToyNet.IpInterface.Header
+namespace Athernet.IPLayer.Header
 {
     /// <summary>
     /// This is the IPv4 protocol header.
     /// </summary>
-    internal class Ipv4Header: ProtocolHeader
+    public class Ipv4Header : ProtocolHeader
     {
-        private ushort _ipId;
         private ushort _ipChecksum;
 
         public static int Ipv4HeaderLength = 20;
+        public override int HeaderLength => Ipv4HeaderLength;
 
         /// <summary>
         /// Simple constructor that initializes the members to zero.
         /// </summary>
-        public Ipv4Header() : base()
+        public Ipv4Header()
         {
             Version = 4;
-            Length = (byte)Ipv4HeaderLength;    // Set the property so it will convert properly
+            Length = (byte) Ipv4HeaderLength; // Set the property so it will convert properly
             TypeOfService = 0;
             Id = 0;
-            OffsetRaw = 0;
+            Offset = 0;
             Ttl = 1;
             Protocol = 0;
             Checksum = 0;
@@ -43,8 +44,8 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public byte Length
         {
-            get => (byte)(_lengthRaw << 4);
-            set => _lengthRaw = (byte)(value >> 4);
+            get => (byte) (_lengthRaw << 2);
+            set => _lengthRaw = (byte) (value >> 2);
         }
 
         /// <summary>
@@ -64,15 +65,15 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort TotalLength
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)TotalLengthRaw);
-            set => TotalLengthRaw = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort) IPAddress.NetworkToHostOrder((short) _totalLengthRaw);
+            set => _totalLengthRaw = (ushort) IPAddress.HostToNetworkOrder((short) value);
         }
 
         /// <summary>
         ///  [NO ORDER CONVERSION] Gets the RAW total length of the IPv4 header and its encapsulated
         ///  payload. Byte order conversion is NOT required.
         /// </summary>
-        public ushort TotalLengthRaw { get; private set; }
+        private ushort _totalLengthRaw;
 
         /// <summary>
         /// Gets and sets the ID field of the IPv4 header. Byte order conversion is
@@ -80,15 +81,17 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort Id
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)_ipId);
-            set => _ipId = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort) IPAddress.NetworkToHostOrder((short) _idRaw);
+            set => _idRaw = (ushort) IPAddress.HostToNetworkOrder((short) value);
         }
 
         /// <summary>
         /// Gets and sets the ID field of the IPv4 header. Byte order conversion is
         /// requried.
         /// </summary>
-        public ushort IdRaw => _ipId;
+        private ushort _idRaw;
+
+        public byte Flags { get; set; }
 
         /// <summary>
         /// Gets and sets the offset field of the IPv4 header which indicates if
@@ -96,15 +99,17 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort Offset
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)OffsetRaw);
-            set => OffsetRaw = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort) IPAddress.NetworkToHostOrder((short) _offsetRaw);
+            set => _offsetRaw = (ushort) IPAddress.HostToNetworkOrder((short) value);
         }
 
         /// <summary>
         /// [NO ORDER CONVERSION] Gets the offset field of the IPv4 header which indicates if
         /// IP fragmentation has occured.
         /// </summary>
-        public ushort OffsetRaw { get; private set; }
+        private ushort _offsetRaw;
+
+        private byte _protocol;
 
 
         /// <summary>
@@ -117,7 +122,11 @@ namespace ToyNet.IpInterface.Header
         /// Gets and sets the protocol field of the IPv4 header. This field indicates
         /// what the encapsulated protocol is.
         /// </summary>
-        public byte Protocol { get; set; }
+        public ProtocolType Protocol
+        {
+            get => (ProtocolType) _protocol;
+            set => _protocol = (byte) value;
+        }
 
         /// <summary>
         /// Gets and sets the checksum field of the IPv4 header. For the IPv4 header, the 
@@ -127,8 +136,8 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort Checksum
         {
-            get => (ushort)IPAddress.NetworkToHostOrder(_ipChecksum);
-            set => _ipChecksum = (ushort)IPAddress.HostToNetworkOrder(value);
+            get => (ushort) (IPAddress.NetworkToHostOrder(_ipChecksum) << 16);
+            set => _ipChecksum = (ushort) (IPAddress.HostToNetworkOrder(value) >> 16);
         }
 
         /// <summary>
@@ -151,70 +160,85 @@ namespace ToyNet.IpInterface.Header
         /// is received from the network and the header object needs to be
         /// constructed from those values.
         /// </summary>
-        /// <param name="ipv4Packet">Byte array containing the binary IPv4 header</param>
-        /// <param name="bytesCopied">Number of bytes used in header</param>
+        /// <param name="ipv4HeaderBytes">Byte array containing the binary IPv4 header</param>
         /// <returns>Returns the Ipv4Header object created from the byte array</returns>
-        public static Ipv4Header Create(byte[] ipv4Packet, ref int bytesCopied)
+        public static Ipv4Header Create(byte[] ipv4HeaderBytes)
         {
-            var ipv4Header = new Ipv4Header();
-
             // Make sure byte array is large enough to contain an IPv4 header
-            if (ipv4Packet.Length < Ipv4Header.Ipv4HeaderLength)
-                return null;
+            if (ipv4HeaderBytes.Length < Ipv4HeaderLength)
+                throw new ArgumentException("The header is too large for a IPv4 header", nameof(ipv4HeaderBytes));
 
-            // Decode the data in the array back into the class properties
-            ipv4Header.Version = (byte)((ipv4Packet[0] >> 4) & 0xF);
-            ipv4Header._lengthRaw = (byte)(ipv4Packet[0] & 0xF);
-            ipv4Header.TypeOfService = ipv4Packet[1];
-            ipv4Header.TotalLengthRaw = BitConverter.ToUInt16(ipv4Packet, 2);
-            ipv4Header._ipId = BitConverter.ToUInt16(ipv4Packet, 4);
-            ipv4Header.OffsetRaw = BitConverter.ToUInt16(ipv4Packet, 6);
-            ipv4Header.Ttl = ipv4Packet[8];
-            ipv4Header.Protocol = ipv4Packet[9];
-            ipv4Header._ipChecksum = BitConverter.ToUInt16(ipv4Packet, 10);
+            var ipv4Header = new Ipv4Header();
+            var binaryReader = new BinaryReader(new MemoryStream(ipv4HeaderBytes));
 
-            ipv4Header.SourceAddress = new IPAddress(BitConverter.ToUInt32(ipv4Packet, 12));
-            ipv4Header.DestinationAddress = new IPAddress(BitConverter.ToUInt32(ipv4Packet, 16));
+            var byte0 = binaryReader.ReadByte();
+            ipv4Header.Version = (byte) ((byte0 >> 4) & 0xF);
+            ipv4Header._lengthRaw = (byte) (byte0 & 0xF);
 
-            bytesCopied = ipv4Header.Length;
+            ipv4Header.TypeOfService = binaryReader.ReadByte();
+            ipv4Header._totalLengthRaw = binaryReader.ReadUInt16();
+            ipv4Header._idRaw = binaryReader.ReadUInt16();
+            ipv4Header._offsetRaw = binaryReader.ReadUInt16();
+            ipv4Header.Ttl = binaryReader.ReadByte();
+            ipv4Header._protocol = binaryReader.ReadByte();
+            ipv4Header._ipChecksum = binaryReader.ReadUInt16();
+            ipv4Header.SourceAddress = new IPAddress(binaryReader.ReadUInt32());
+            ipv4Header.DestinationAddress = new IPAddress(binaryReader.ReadUInt32());
 
             return ipv4Header;
         }
 
-                /// <summary>
-        /// This routine takes the properties of the IPv4 header and marhalls them into
+        /// <summary>
+        /// This routine takes the properties of the IPv4 header and marshals them into
         /// a byte array representing the IPv4 header that is to be sent on the wire.
         /// </summary>
-        /// <param name="payLoad">The encapsulated headers and data</param>
+        /// <param name="header">The encapsulated header</param>
+        /// <param name="payLoad">The encapsulated data</param>
         /// <returns>A byte array of the IPv4 header and payload</returns>
-        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        public byte[] GetProtocolPacketBytes(TcpHeader header, byte[] payLoad)
         {
-            var index = 0;
-
+            switch (header)
+            {
+                case UdpHeader udpHeader:
+                    udpHeader.Ipv4PacketHeader = this;
+                    Protocol = ProtocolType.Udp;
+                    break;
+                case IcmpHeader icmpHeader:
+                    Protocol = ProtocolType.Icmp;
+                    break;
+                default:
+                    throw new IndexOutOfRangeException();
+            }
+            
             // Allocate space for the IPv4 header plus payload
-            var ipv4Packet = new byte[Ipv4HeaderLength + payLoad.Length];
+            TotalLength = (ushort) (Ipv4HeaderLength + header.HeaderLength + payLoad.Length);
+
+            var ipv4Packet = new byte[Ipv4HeaderLength + header.HeaderLength + payLoad.Length];
             var memoryStream = new MemoryStream(ipv4Packet);
 
-            memoryStream.WriteByte((byte)((Version << 4) | _lengthRaw));
+            memoryStream.WriteByte((byte) ((Version << 4) | _lengthRaw));
             memoryStream.WriteByte(TypeOfService);
-            memoryStream.Write(BitConverter.GetBytes(TotalLengthRaw));
-            memoryStream.Write(BitConverter.GetBytes(IdRaw));
-            memoryStream.Write(BitConverter.GetBytes(OffsetRaw));
+            memoryStream.Write(BitConverter.GetBytes(_totalLengthRaw));
+            memoryStream.Write(BitConverter.GetBytes(_idRaw));
+            var offsets = BitConverter.GetBytes(_offsetRaw);
+            memoryStream.WriteByte( (byte) (Flags | (offsets[0] & 0x1F)));
+            memoryStream.WriteByte(offsets[1]);
 
             memoryStream.WriteByte(Ttl);
-            memoryStream.WriteByte(Protocol);
-            memoryStream.WriteByte(0); // Zero the checksum for now since we will
-            memoryStream.WriteByte(0); // calculate it later
+            memoryStream.WriteByte(_protocol);
+
+            // Zero the checksum for now since we will calculate it later
+            memoryStream.Write(new byte[2]);
 
             memoryStream.Write(SourceAddress.GetAddressBytes());
             memoryStream.Write(DestinationAddress.GetAddressBytes());
 
-            memoryStream.WriteByte((byte)((Version << 4) | _lengthRaw));
-            
-            // Compute the checksum over the entire packet (IPv4 header + payload)
-            Checksum = ComputeChecksum(ipv4Packet);
+            memoryStream.Write(header.GetProtocolPacketBytes(payLoad));
 
+            // Compute the checksum over the entire packet (IPv4 header)
+            Checksum = ComputeChecksum(ipv4Packet[..Ipv4HeaderLength]);
             // Set the checksum into the built packet
+            memoryStream.Seek(10, SeekOrigin.Begin);
             memoryStream.Write(BitConverter.GetBytes(_ipChecksum));
 
             return ipv4Packet;

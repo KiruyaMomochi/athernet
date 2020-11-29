@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Athernet.PreambleBuilder
+namespace Athernet.PhysicalLayer.PreambleBuilder
 {
     public class FunctionPreambleBuilder
     {

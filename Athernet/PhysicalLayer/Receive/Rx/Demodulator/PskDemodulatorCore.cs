@@ -142,9 +142,9 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
 
         private void Complete()
         {
-            Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
+            // Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
             _complete = true;
-            Console.WriteLine("Complete");
+            // Console.WriteLine("Complete");
 
             Debug.Assert(_frame.Count == _maxPayloadBytes);
             if (Payload.IsDisposed)
@@ -162,10 +162,10 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         {
             if (_complete) return;
             _samples.Add(sample);
-            if (_samples.Count % 100 == 0)
-            {
-                Console.Write($"{sample} ");
-            }
+            // if (_samples.Count % 100 == 0)
+            // {
+            //     Console.Write($"{sample} ");
+            // }
             Process();
         }
 
@@ -249,10 +249,10 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             // Complete when no more frame bytes
             if (_lastPayloadBytes == 0)
             {
-                Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
+                // Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
                 //_source.SkipLast(0);
                 //OnComplete();
-                Console.WriteLine("Set _complete");
+                // Console.WriteLine("Set _complete");
                 Complete();
             }
         }
@@ -291,7 +291,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         /// </summary>
         private void AdvanceByte()
         {
-            Debug.Write($"-> {Byte:X} Offset: {_offset}\n");
+            // Debug.Write($"-> {Byte:X} Offset: {_offset}\n");
 
             // Check if it is the first byte
             if (_lastPayloadBytes == null)

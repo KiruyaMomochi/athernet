@@ -1,69 +1,45 @@
 using System;
 using System.IO;
 using System.Net;
-using ToyNet.IpInterface.Packet;
+using Athernet.IPLayer.Packet;
 
-namespace ToyNet.IpInterface.Header
+namespace Athernet.IPLayer.Header
 {
     /// <summary>
     /// The ICMP protocol header used with the IPv4 protocol.
     /// </summary>
-    internal class IcmpHeader: ProtocolHeader
+    public class IcmpHeader: TcpHeader
     {
         private byte _icmpType;                   // ICMP message type
-        private byte _icmpCode;                   // ICMP message code
-        private ushort _icmpChecksum;               // Checksum of ICMP header and payload
         private ushort _icmpId;                     // Message ID
-        private ushort _icmpSequence;               // ICMP sequence number
 
-        public static byte EchoRequestType = 8;     // ICMP echo request
-        public static byte EchoRequestCode = 0;     // ICMP echo request code
-        public static byte EchoReplyType = 0;     // ICMP echo reply
-        public static byte EchoReplyCode = 0;     // ICMP echo reply code
-
-        public static int IcmpHeaderLength = 8;    // Length of ICMP header
-
-        /// <summary>
-        /// Default constructor for ICMP packet
-        /// </summary>
-        public IcmpHeader()
-            : base()
-        {
-            _icmpType = 0;
-            _icmpCode = 0;
-            _icmpChecksum = 0;
-            _icmpId = 0;
-            _icmpSequence = 0;
-        }
-
+        public const int IcmpHeaderLength = 8;    // Length of ICMP header
+        public override int HeaderLength => IcmpHeaderLength;
+        
         /// <summary>
         /// ICMP message type.
         /// </summary>
-        public ICMPType Type
+        public IcmpType Type
         {
-            get => (ICMPType)_icmpType;
+            get => (IcmpType)_icmpType;
             set => _icmpType = (byte)value;
         }
 
         /// <summary>
         /// ICMP message code.
         /// </summary>
-        public byte Code
-        {
-            get => _icmpCode;
-            set => _icmpCode = value;
-        }
+        public byte Code { get; set; }
 
         /// <summary>
         /// Checksum of ICMP packet and payload.  Performs the necessary byte order conversion.
         /// </summary>
         public ushort Checksum
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)_icmpChecksum);
-            set => _icmpChecksum = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort)IPAddress.NetworkToHostOrder((short)_checksumRaw);
+            set => _checksumRaw = (ushort)IPAddress.HostToNetworkOrder((short)value);
         }
 
-        public ushort ChecksumRaw => _icmpChecksum;
+        private ushort _checksumRaw;
 
         /// <summary>
         /// ICMP message ID. Used to uniquely identify the source of the ICMP packet.
@@ -83,11 +59,11 @@ namespace ToyNet.IpInterface.Header
         /// </summary>
         public ushort Sequence
         {
-            get => (ushort)IPAddress.NetworkToHostOrder((short)_icmpSequence);
-            set => _icmpSequence = (ushort)IPAddress.HostToNetworkOrder((short)value);
+            get => (ushort)IPAddress.NetworkToHostOrder((short)_sequenceRaw);
+            set => _sequenceRaw = (ushort)IPAddress.HostToNetworkOrder((short)value);
         }
 
-        public ushort SequenceRaw => _icmpSequence;
+        private ushort _sequenceRaw;
 
         /// <summary>
         /// This routine creates an instance of the IcmpHeader class from a byte
@@ -95,27 +71,22 @@ namespace ToyNet.IpInterface.Header
         /// is received from the network and the header object needs to be
         /// constructed from those values. 
         /// </summary>
-        /// <param name="icmpPacket">Byte array containing the binary ICMP header</param>
-        /// <param name="bytesCopied">Number of bytes used in header</param>
+        /// <param name="icmpHeaderBytes">Byte array containing the binary ICMP header</param>
         /// <returns>Returns the IcmpHeader object created from the byte array</returns>
-        public static IcmpHeader Create(byte[] icmpPacket, ref int bytesCopied)
+        public static IcmpHeader Create(byte[] icmpHeaderBytes)
         {
-            var icmpHeader = new IcmpHeader();
-            var offset = 0;
-
             // Make sure byte array is large enough to contain an ICMP header
-            if (icmpPacket.Length < IcmpHeader.IcmpHeaderLength)
-                return null;
-
-            icmpHeader._icmpType = icmpPacket[offset++];
-            icmpHeader._icmpCode = icmpPacket[offset++];
-            icmpHeader._icmpChecksum = BitConverter.ToUInt16(icmpPacket, offset);
-            offset += 2;
-            icmpHeader._icmpId = BitConverter.ToUInt16(icmpPacket, offset);
-            offset += 2;
-            icmpHeader._icmpSequence = BitConverter.ToUInt16(icmpPacket, offset);
-
-            bytesCopied = IcmpHeader.IcmpHeaderLength;
+            if (icmpHeaderBytes.Length < IcmpHeaderLength)
+                throw new ArgumentException("The header is too large for a IPv4 header", nameof(icmpHeaderBytes));
+            
+            var icmpHeader = new IcmpHeader();
+            var binaryReader = new BinaryReader(new MemoryStream(icmpHeaderBytes));
+            
+            icmpHeader._icmpType = binaryReader.ReadByte();
+            icmpHeader.Code = binaryReader.ReadByte();
+            icmpHeader._checksumRaw = binaryReader.ReadUInt16();
+            icmpHeader._icmpId = binaryReader.ReadUInt16();
+            icmpHeader._sequenceRaw = binaryReader.ReadUInt16();
 
             return icmpHeader;
         }
@@ -129,7 +100,7 @@ namespace ToyNet.IpInterface.Header
         /// <returns>Byte array representing the ICMP packet and payload</returns>
         public override byte[] GetProtocolPacketBytes(byte[] payLoad)
         {
-            var icmpPacket = new byte[IcmpHeader.IcmpHeaderLength + payLoad.Length];
+            var icmpPacket = new byte[IcmpHeaderLength + payLoad.Length];
             var byteWriter = new MemoryStream(icmpPacket);
 
             byteWriter.WriteByte((byte)Type);
@@ -137,16 +108,37 @@ namespace ToyNet.IpInterface.Header
             byteWriter.WriteByte(0);
             byteWriter.WriteByte(0);
             byteWriter.Write(BitConverter.GetBytes(IdRaw));
-            byteWriter.Write(BitConverter.GetBytes(SequenceRaw));
+            byteWriter.Write(BitConverter.GetBytes(_sequenceRaw));
             byteWriter.Write(payLoad);
 
             // Compute the checksum over the entire packet
             Checksum = ComputeChecksum(icmpPacket);
 
             // Put the checksum back into the packet
-            byteWriter.Write(BitConverter.GetBytes(ChecksumRaw));
+            byteWriter.Seek(2, SeekOrigin.Begin);
+            byteWriter.Write(BitConverter.GetBytes(_checksumRaw));
 
             return icmpPacket;
+        }
+
+        public bool ValidateChecksum(byte[] payload) => ValidateCheckSum(Checksum, payload);
+
+        public bool ValidateCheckSum(ushort checksum, byte[] payLoad)
+        {
+            var icmpPacket = new byte[IcmpHeaderLength + payLoad.Length];
+            var byteWriter = new MemoryStream(icmpPacket);
+
+            byteWriter.WriteByte((byte)Type);
+            byteWriter.WriteByte(Code);
+            byteWriter.WriteByte(0);
+            byteWriter.WriteByte(0);
+            byteWriter.Write(BitConverter.GetBytes(IdRaw));
+            byteWriter.Write(BitConverter.GetBytes(_sequenceRaw));
+            byteWriter.Write(payLoad);
+
+            // Compute the checksum over the entire packet
+            var trueSum = ComputeChecksum(icmpPacket);
+            return checksum == trueSum;
         }
     }
 }

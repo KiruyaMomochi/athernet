@@ -1,6 +1,6 @@
 using System;
 
-namespace ToyNet.IpInterface
+namespace Athernet.IPLayer
 {
     public static class Utils
     {
@@ -26,8 +26,10 @@ namespace ToyNet.IpInterface
                             break;
                         Console.Write($"{printBytes[index++]:x2}");
                     }
+
                     Console.Write(" ");
                 }
+
                 Console.WriteLine("");
             }
         }

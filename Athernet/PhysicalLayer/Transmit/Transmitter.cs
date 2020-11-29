@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Transmit.Modulator;
-using Athernet.PreambleBuilder;
 using Force.Crc32;
 using NAudio.Wave;
 

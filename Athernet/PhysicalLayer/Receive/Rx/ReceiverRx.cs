@@ -6,9 +6,9 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Receive.PreambleDetector;
 using Athernet.PhysicalLayer.Receive.Rx.Demodulator;
-using Athernet.PreambleBuilder;
 using Force.Crc32;
 using NAudio.Wave;
 
@@ -195,7 +195,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx
 
         private void OnDataAvailable(DataAvailableEventArgs args)
         {
-            Debug.WriteLine($"R5. New data available, length: {args.Data.Length}.");
+            Trace.WriteLine($"R5. New data available, length: {args.Data.Length}, Crc: {args.CrcResult}.");
             DataAvailable?.Invoke(this, args);
         }
 
