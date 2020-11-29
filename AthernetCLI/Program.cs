@@ -137,8 +137,8 @@ namespace AthernetCLI
             
             byte[] IcmpEchoByte = IcmpEchoPacket.Header.GetProtocolPacketBytes(IcmpEchoPacket.Payload);
             var IcmpIpv4Packet = new Ipv4Packet();
-            IcmpIpv4Packet.SetHeader(IPAddress.Parse("10.20.194.230"), IPAddress.Parse("10.20.200.129"), IcmpEchoByte.Length);
-
+            IcmpIpv4Packet.SetHeader(IPAddress.Parse("10.20.194.230"), IPAddress.Parse("220.181.38.150"), IcmpEchoByte.Length);
+            IcmpIpv4Packet.Header.Ttl = 233;
             byte[] BuiltPacket = PacketBuilder.BuildPacket(IcmpIpv4Packet.Header, IcmpEchoPacket.Header, IcmpEchoPacket.Payload);
             
             int j = 0;
@@ -150,7 +150,7 @@ namespace AthernetCLI
                 if (j % 16 == 0) Console.Write("\n");
             }
 
-            SendSignal(BuiltPacket, IPAddress.Parse("10.20.200.129"), 10086);
+            ReceiveAndSendSignal(BuiltPacket, IPAddress.Parse("220.181.38.150"), 10086);
             
         }
 
@@ -194,33 +194,48 @@ namespace AthernetCLI
             }
 
         }
-        private static void ReceiveSignal(byte [] builtPacket, IPAddress destAddress, int destPort)
+        private static void ReceiveAndSendSignal(byte [] builtPacket, IPAddress destAddress, int destPort)
         {
             var rawSocket = new Socket(
-                destAddress.AddressFamily,
+                AddressFamily.InterNetwork,
                 SocketType.Raw,
-                ProtocolType.Raw
+                ProtocolType.Icmp
             );
 
             // Bind the socket to the interface specified
             IPAddress bindAddress = IPAddress.Any;
             rawSocket.Bind( new IPEndPoint( bindAddress, 0 ) );
+            
 
             // Set the HeaderIncluded option since we include the IP header
             SocketOptionLevel socketLevel = SocketOptionLevel.IP;
             rawSocket.SetSocketOption( socketLevel, SocketOptionName.HeaderIncluded, 1 );
 
+            var ReceiveBuffer = new Byte[114514];
+            EndPoint remote = new IPEndPoint(destAddress, destPort);
+            EndPoint remoteAny = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
             
+            rawSocket.Connect(remote);
             try
             {
                 // Send the packet!
                 int sendCount = 114514; // 自己指定
                 for (int i = 0; i < sendCount; i++)
                 {
-                    int rc = rawSocket.SendTo(builtPacket, new IPEndPoint(destAddress, destPort));
+
+                    int rc = rawSocket.Send(builtPacket);
+                    Console.WriteLine($"Sent {rc/60} packets!");
+                    var byteCount = rawSocket.ReceiveFrom(ReceiveBuffer, ref remoteAny); // block
+                    Console.WriteLine($"Receive {byteCount/60} packets!");
                     Thread.Sleep(1000);
-                    Console.WriteLine($"Sent {i} packets!");
-                    // byteCount = rawSocket.ReceiveFrom()
+                    // var j = 0;
+                    // foreach (byte k in ReceiveBuffer)
+                    // {
+                    //     Console.Write("{0:X2} ", k);
+                    //     j++;
+                    //     if (j % 2 == 0) Console.Write(" ");
+                    //     if (j % 16 == 0) Console.Write("\n");
+                    // }
                 }
             }
             catch (SocketException err)
