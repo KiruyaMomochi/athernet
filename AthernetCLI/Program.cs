@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using Athernet.IPLayer;
 using Athernet.IPLayer.Header;
@@ -68,6 +69,7 @@ namespace AthernetCLI
                 switch (packet.TcpHeader)
                 {
                     case UdpHeader udpHeader:
+                        Console.WriteLine("UDP Received!");
                         var src = new IPEndPoint(packet.Header.SourceAddress, udpHeader.SourcePort);
                         var mp = natTable[src];
 
@@ -159,6 +161,16 @@ namespace AthernetCLI
             var buffer = new byte[fs.Length];
             fs.Read(buffer);
 
+            node1.PacketAvailable += (sender, args) =>
+            {
+                if (args.Packet.TcpHeader is UdpHeader udpHeader)
+                {
+                    var rm = new IPEndPoint(args.Packet.Header.SourceAddress, udpHeader.SourcePort);
+                    ShowBytes(rm, args.Packet.Payload);
+                }
+            };
+            node1.StartReceive();
+
             node1.SendPacket(new Ipv4Packet
             {
                 Header = new Ipv4Header
@@ -225,8 +237,7 @@ namespace AthernetCLI
             var remoteIpEndpoint = new IPEndPoint(IPAddress.Parse(source), 10086);
 
             var receivedBytes = udpClient.Receive(ref remoteIpEndpoint);
-            Console.WriteLine($"Received {receivedBytes.Length} bytes from {remoteIpEndpoint}");
-            Console.WriteLine(BitConverter.ToString(receivedBytes));
+            ShowBytes(remoteIpEndpoint, receivedBytes);
 
             udpClient.Send(receivedBytes, receivedBytes.Length, remoteIpEndpoint);
         }
@@ -247,6 +258,15 @@ namespace AthernetCLI
             while (true) { }
 
             //udpClient.Close();
+        }
+
+        private static void ShowBytes(IPEndPoint endPoint, byte[] b)
+        {
+           var x = Encoding.UTF8.GetString(b).Split('\n');
+           foreach (var s in x)
+           {
+               Console.WriteLine($"{endPoint} {s}");
+           }
         }
     }
 }
