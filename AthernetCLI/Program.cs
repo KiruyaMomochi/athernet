@@ -58,7 +58,8 @@ namespace AthernetCLI
         {
             var natTable = new Dictionary<IPEndPoint, IPEndPoint>
             {
-                {IPEndPoint.Parse("192.168.1.2:6812"), new IPEndPoint(selfIpAddress, 6011)}
+                {IPEndPoint.Parse("192.168.1.2:6812"), new IPEndPoint(selfIpAddress, 6011)},
+                {new IPEndPoint(selfIpAddress, 6011), IPEndPoint.Parse("192.168.1.2:6812")}
             };
 
             node2.PacketAvailable += (sender, args) =>
@@ -80,6 +81,22 @@ namespace AthernetCLI
 
                         var udpRec = udpClient.Receive(ref remoteIpEndpoint);
                         Console.WriteLine(BitConverter.ToString(udpRec));
+
+                        node2.SendPacket(new Ipv4Packet(){
+                            Header = new Ipv4Header
+                            {
+                                SourceAddress = remoteIpEndpoint.Address,
+                                DestinationAddress = src.Address,
+                                Ttl = 64,
+                                Flags = 0x40
+                            },
+                            Payload = udpRec,
+                            TcpHeader = new UdpHeader
+                            {
+                                SourcePort = (ushort)remoteIpEndpoint.Port,
+                                DestinationPort = (ushort)src.Port
+                            }
+                        });
 
                         Console.WriteLine("Sent!");
                         break;
