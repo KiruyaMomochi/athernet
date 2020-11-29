@@ -21,19 +21,20 @@ namespace AthernetCLI
         private static void Main(string[] args)
         {
             Athernet.Utils.Audio.ListDevices();
-            
-            node1 = new IP(IPAddress.Parse("192.168.1.2"), 1, 1, 1, 2048 - 7);
-            //node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 1, 2, 2048 - 7);
+
+            //node1 = new IP(IPAddress.Parse("192.168.1.2"), 1, 1, 1, 2048 - 7);
+            node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 1, 1, 2048 - 7);
             // //Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
-            var watch = Stopwatch.StartNew();
+            //var watch = Stopwatch.StartNew();
             //
             // // ReSharper disable twice StringLiteralTypo
             Nat(IPAddress.Parse("10.20.223.177"));
+            Thread.Sleep(100000);
             // // SendUdp(new FileInfo(@"C:\Users\xtyzw\Downloads\A.txt"), IPAddress.Parse("10.19.200.129"));
-            SendIcmp(Dns.GetHostEntry("www.baidu.com").AddressList[0]);
+            //SendIcmp(Dns.GetHostEntry("www.baidu.com").AddressList[0]);
             //
-            watch.Stop();
-            Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
+            //watch.Stop();
+            //Console.WriteLine($"Time elapsed: {watch.ElapsedMilliseconds} ms.");
         }
 
         public static byte[] Compress(byte[] data)
@@ -74,6 +75,12 @@ namespace AthernetCLI
                         var udpClient = new UdpClient(mp);
                         udpClient.Connect(dst);
                         udpClient.Send(packet.Payload, packet.Payload.Length);
+                        
+                        var remoteIpEndpoint = new IPEndPoint(IPAddress.Any, 6011);
+
+                        var udpRec = udpClient.Receive(ref remoteIpEndpoint);
+                        Console.WriteLine(BitConverter.ToString(udpRec));
+
                         Console.WriteLine("Sent!");
                         break;
                     case IcmpHeader icmpHeader:
@@ -202,8 +209,9 @@ namespace AthernetCLI
 
             var receivedBytes = udpClient.Receive(ref remoteIpEndpoint);
             Console.WriteLine($"Received {receivedBytes.Length} bytes from {remoteIpEndpoint}");
-            using var fs = output.OpenWrite();
-            fs.Write(receivedBytes);
+            Console.WriteLine(BitConverter.ToString(receivedBytes));
+
+            udpClient.Send(receivedBytes, receivedBytes.Length, remoteIpEndpoint);
         }
 
         private static void SendUdp(string hostname, int port)
