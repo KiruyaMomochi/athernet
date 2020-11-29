@@ -17,10 +17,13 @@ namespace AthernetCLI
 {
     class Program
     {
+        public static IP node1, node2;
         private static void Main(string[] args)
         {
             Athernet.Utils.Audio.ListDevices();
-
+            
+            node1 = new IP(IPAddress.Parse("192.168.1.2"), 1, 1, 1, 2048 - 7);
+            //node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 1, 2, 2048 - 7);
             // //Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             var watch = Stopwatch.StartNew();
             //
@@ -56,7 +59,6 @@ namespace AthernetCLI
             {
                 {IPEndPoint.Parse("192.168.1.2:6812"), new IPEndPoint(selfIpAddress, 6011)}
             };
-            var node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 1, 2, 2048 - 7);
 
             node2.PacketAvailable += (sender, args) =>
             {
@@ -129,8 +131,6 @@ namespace AthernetCLI
 
         private static void SendUdp(FileInfo input, IPAddress ipAddress)
         {
-            var node1 = new IP(IPAddress.Parse("192.168.1.2"), 2, 2, 1, 2048 - 7);
-
             var fs = input.OpenRead();
             var buffer = new byte[fs.Length];
             fs.Read(buffer);
@@ -156,7 +156,6 @@ namespace AthernetCLI
 
         private static void SendIcmp(IPAddress ipAddress)
         {
-            var node1 = new IP(IPAddress.Parse("192.168.1.2"), 2, 2, 1, 2048 - 7);
             node1.StartReceive();
             node1.PacketAvailable += (sender, args) =>
             {
@@ -205,29 +204,6 @@ namespace AthernetCLI
             Console.WriteLine($"Received {receivedBytes.Length} bytes from {remoteIpEndpoint}");
             using var fs = output.OpenWrite();
             fs.Write(receivedBytes);
-        }
-
-        private static void DoPhysicalTask(int payloadBytes = 1020)
-        {
-            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            var node1 = new Physical(2, 1, payloadBytes);
-            var node2 = new Physical(1, 2, payloadBytes);
-
-            node2.StartReceive();
-
-            var buffer = new byte[payloadBytes];
-            var rand = new Random();
-            rand.NextBytes(buffer);
-            //Array.Fill<byte>(buffer, 255);
-
-            node2.DataAvailable += (sender, args) =>
-            {
-                Console.WriteLine($"Data: {BitConverter.ToString(args.Data)}, CRC: {args.CrcResult}, Validate: {args.Data.SequenceEqual(buffer)}");
-                ewh.Set();
-            };
-            //file.OpenRead().Read(buffer);
-            node1.AddPayload(buffer);
-            ewh.WaitOne();
         }
 
         private static void SendUdp(string hostname, int port)
