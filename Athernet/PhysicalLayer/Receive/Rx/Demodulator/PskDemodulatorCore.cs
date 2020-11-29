@@ -146,7 +146,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             _complete = true;
             // Console.WriteLine("Complete");
 
-            Debug.Assert(_frame.Count == _maxPayloadBytes);
+            Debug.Assert(_frame.Count <= _maxPayloadBytes);
             if (Payload.IsDisposed)
                 return;
 

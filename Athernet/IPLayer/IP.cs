@@ -53,7 +53,8 @@ namespace Athernet.IPLayer
             {
                 msb <<= 1;
             }
-            _mac.AddPayload(1, packet.Concat(new byte[msb - length]).ToArray());
+
+            _mac.AddPayload(_mac.Address == 1 ? (byte) 2 : (byte) 1, packet.Concat(new byte[msb - length]).ToArray());
         }
 
         protected virtual void OnPacketAvailable(Ipv4Packet packet)

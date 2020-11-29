@@ -11,11 +11,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AthernetTest", "AthernetTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WavPlayer", "WavPlayer\WavPlayer.csproj", "{4A0FE26B-7B41-4DCA-A92E-DC3ADE5B90B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacPerf", "MacPerf\MacPerf.csproj", "{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MacPerf", "MacPerf\MacPerf.csproj", "{2B48CEEB-6B8B-40C0-A3D3-C76BD386386E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RawSocket", "RawSocket\RawSocket.csproj", "{2128C00A-6B9C-4B7A-8855-580271183242}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RawSocket", "RawSocket\RawSocket.csproj", "{2128C00A-6B9C-4B7A-8855-580271183242}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToyNet", "ToyNet\ToyNet.csproj", "{C12F131A-058D-4341-9978-45B18BC2CABE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ToyNet", "ToyNet\ToyNet.csproj", "{C12F131A-058D-4341-9978-45B18BC2CABE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PacketCapture", "PacketCapture\PacketCapture.csproj", "{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -111,6 +113,18 @@ Global
 		{C12F131A-058D-4341-9978-45B18BC2CABE}.Release|x64.Build.0 = Release|Any CPU
 		{C12F131A-058D-4341-9978-45B18BC2CABE}.Release|x86.ActiveCfg = Release|Any CPU
 		{C12F131A-058D-4341-9978-45B18BC2CABE}.Release|x86.Build.0 = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|x64.Build.0 = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Debug|x86.Build.0 = Debug|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|x64.ActiveCfg = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|x64.Build.0 = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|x86.ActiveCfg = Release|Any CPU
+		{42F0D58A-A08C-41B9-A789-5B19E59BBDA2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
