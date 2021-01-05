@@ -24,7 +24,7 @@ namespace AthernetCLI
             Athernet.Utils.Audio.ListDevices();
 
             //node1 = new IP(IPAddress.Parse("192.168.1.2"), 1, 1, 1, 2048 - 7);
-            node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 1, 1, 2048 - 7);
+            node2 = new IP(IPAddress.Parse("192.168.1.1"), 1, 0, 0, 2048 - 7);
             // //Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             //var watch = Stopwatch.StartNew();
             //
