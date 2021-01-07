@@ -147,7 +147,7 @@ namespace Athernet.MacLayer
                     _ackEwh.Set();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new NotImplementedException($"The requested type {frame.Type} is not handled.");
             }
         }
 
