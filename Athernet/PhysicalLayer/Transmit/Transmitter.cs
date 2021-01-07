@@ -132,7 +132,7 @@ namespace Athernet.PhysicalLayer.Transmit
             var mask = Utils.Maths.MostSignificantBitMask(payloadLength);
             Trace.Assert(
                 payloadLength == mask,
-                "The length of data should be the power of 2!"
+                $"The length of data is {payloadLength}, but should be power of 2!"
             );
 
             var frame = new byte[payloadLength + 1];

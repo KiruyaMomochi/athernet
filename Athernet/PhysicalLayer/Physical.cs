@@ -69,6 +69,7 @@ namespace Athernet.PhysicalLayer
 
         /// <summary>
         /// Indicate the playing process is stopped.
+        /// This doesn't means the playing is complete.
         /// </summary>
         public event EventHandler<StoppedEventArgs> PlayStopped
         {
