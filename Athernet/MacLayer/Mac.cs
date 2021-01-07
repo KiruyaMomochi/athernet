@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Threading;
 using Athernet.PhysicalLayer;
 
@@ -14,6 +16,8 @@ namespace Athernet.MacLayer
     /// </remarks>
     public class Mac
     {
+        public Dictionary<IPEndPoint, IPEndPoint> NatTable;
+
         public byte Address { get; }
 
         public int MaxDataBytes => _physical.MaxDataBytes;
@@ -49,12 +53,23 @@ namespace Athernet.MacLayer
             _physical = physical;
             // _ackFrame = new byte[PayloadBytes];
             SubscribePhysical();
+            InitNatTable();
         }
 
-        public Mac(byte address, int playDeviceNumber = 0, int recordDeviceNumber = 0, int maxDataBytes = 1000)
+        public Mac(byte address, int playDeviceNumber = 0, int recordDeviceNumber = 0, int maxDataBytes = 1020)
         {
-            _physical = new Physical(playDeviceNumber, recordDeviceNumber, maxDataBytes);
+            _physical = new Physical(playDeviceNumber, recordDeviceNumber, maxDataBytes + 3);
             Address = address;
+            SubscribePhysical();
+            InitNatTable();   
+        }
+
+        private void InitNatTable()
+        {
+            NatTable = new Dictionary<IPEndPoint, IPEndPoint>
+            {
+                {IPEndPoint.Parse("192.168.1.1:1234"), IPEndPoint.Parse("10.20.223.177:2333")}
+            };
         }
 
         private void SubscribePhysical()
@@ -94,7 +109,7 @@ namespace Athernet.MacLayer
             }
             var frame = MacFrame.Parse(e.Data);
 
-            Trace.WriteLine($"Mx{Address} [{frame.Type}] {frame.Dest} <- {frame.Src}.");
+            Debug.WriteLine($"Mx{Address} [{frame.Type}] {frame.Dest} <- {frame.Src}.");
 
             if (frame.Dest != Address)
             {
@@ -138,7 +153,7 @@ namespace Athernet.MacLayer
 
         public void AddPayload(byte dest, byte[] payload)
         {
-            if (payload.Length >= MaxDataBytes)
+            if (payload.Length > MaxDataBytes)
                 throw new InvalidDataException($"bytes have length of {payload.Length}, should be not greater than {MaxDataBytes}");
 
             var frame = new MacFrame(dest, Address, MacType.Data, payload);

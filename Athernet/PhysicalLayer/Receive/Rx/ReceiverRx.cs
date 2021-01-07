@@ -6,9 +6,9 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Receive.PreambleDetector;
 using Athernet.PhysicalLayer.Receive.Rx.Demodulator;
-using Athernet.PreambleBuilder;
 using Force.Crc32;
 using NAudio.Wave;
 
@@ -32,9 +32,11 @@ namespace Athernet.PhysicalLayer.Receive.Rx
         /// Indicates new data is available
         /// </summary>
         public event EventHandler<DataAvailableEventArgs> DataAvailable;
+
         public event EventHandler PacketDetected;
 
-        public ReceiverRx(int deviceNumber, int maxFrameBytes, IDemodulatorRx demodulator, WuPreambleBuilder preambleBuilder)
+        public ReceiverRx(int deviceNumber, int maxFrameBytes, IDemodulatorRx demodulator,
+            WuPreambleBuilder preambleBuilder)
         {
             _demodulator = demodulator;
             _demodulator.MaxFrameBytes = maxFrameBytes;
@@ -111,8 +113,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx
             _recorder = new WaveInEvent()
             {
                 DeviceNumber = deviceNumber,
-                WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(_demodulator.SampleRate, 1),
-                BufferMilliseconds = 10
+                WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(_demodulator.SampleRate, 1)
             };
 
             _dataReceived = Observable.FromEventPattern<EventHandler<WaveInEventArgs>, WaveInEventArgs>(
@@ -134,37 +135,52 @@ namespace Athernet.PhysicalLayer.Receive.Rx
                 // .Subscribe(x => x.Subscribe(y => Console.Write("!"), () => { Console.Write(".");}));
                 .Merge()
                 // .Subscribe(x => x.Subscribe(_ => Console.Write("."), _ => Console.Write("E"), () => Console.Write("C")));
-                .Subscribe(_ => Console.Write("."));
+                .Subscribe(x =>
+                {
+                    var res = x.ToArray();
+                    OnDataAvailable(ValidateCrc(res));
+                });
         }
 
         private IObservable<IEnumerable<byte>> GetFrame(IObservable<float> observable)
         {
-            var last = observable.Take(2 * _preamble.Length + _detector.WindowSize)
+            // TODO: use correct Rx way
+
+            var sub = observable.Replay().RefCount();
+            //sub.Connect();
+            //var last = sub.Take(2 * _preamble.Length + _detector.WindowSize)
+            //    .ToArray()
+            //    .Select(x =>
+            //    {
+            //        var pos = _detector.Detect(x);
+            //        if (pos != -1)
+            //        {
+            //            Debug.WriteLine($"Detected x[{x.Length}] at {pos} in {WindowSize}");
+            //        }
+            //        return pos != -1 ? x.Skip(pos + 1).ToObservable().Concat(sub) : null;
+            //    });
+
+            var last = sub.Take(2 * _preamble.Length + _detector.WindowSize)
                 .ToArray()
                 .Select(x =>
                 {
                     var pos = _detector.Detect(x);
-                    Console.WriteLine($"Detected x[{x.Length}] at {pos} in {WindowSize}");
-                    return pos != -1 ? x.Skip(pos).ToObservable() : null;
+                    if (pos != -1)
+                    {
+                        Debug.WriteLine($"Detected x[{x.Length}] at {pos} in {WindowSize}");
+                    }
+
+                    return pos;
                 });
 
-            var res = last.Select(x =>
-            {
-                if (x != null)
-                    return _demodulator.Demodulate(x.Concat(observable));
-                else
-                    return Observable.Empty<IEnumerable<byte>>();
-            }).Merge();
+            var res = last.Where(x => x != -1).Select(x => _demodulator.Demodulate(sub.Skip(x))).Merge();
 
             return res;
         }
 
         private static DataAvailableEventArgs ValidateCrc(byte[] arg)
         {
-            if (arg.Length == 0)
-            {
-                return new DataAvailableEventArgs(arg, true);
-            }
+            if (arg.Length == 0) return new DataAvailableEventArgs(arg, true);
 
             var res = Crc32Algorithm.IsValidWithCrcAtEnd(arg);
             Debug.WriteLine($"R4. Validating CRC: {res}.");
@@ -179,7 +195,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx
 
         private void OnDataAvailable(DataAvailableEventArgs args)
         {
-            Debug.WriteLine($"R5. New data available, length: {args.Data.Length}.");
+            Trace.WriteLine($"R5. New data available, length: {args.Data.Length}, Crc: {args.CrcResult}.");
             DataAvailable?.Invoke(this, args);
         }
 

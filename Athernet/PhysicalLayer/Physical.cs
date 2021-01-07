@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Receive;
 using Athernet.PhysicalLayer.Receive.Rx;
 using Athernet.PhysicalLayer.Receive.Rx.Demodulator;
 using Athernet.PhysicalLayer.Transmit;
 using Athernet.PhysicalLayer.Transmit.Modulator;
-using Athernet.PreambleBuilder;
 using Athernet.Utils;
 using NAudio.Wave;
 
@@ -118,9 +118,9 @@ namespace Athernet.PhysicalLayer
         /// <exception cref="InvalidDataException">Thrown when the payload length is not equal to <c>PayloadBytes</c>.</exception>
         public void AddPayload(byte[] payload)
         {
-            if (payload.Length != PayloadBytes)
+            if (payload.Length > PayloadBytes)
             {
-                throw new InvalidDataException($"bytes have length of {payload.Length}, should be {PayloadBytes}");
+                throw new InvalidDataException($"bytes have length of {payload.Length}, should be less or equal than {PayloadBytes}");
             }
             Debug.UpdateTimeSpan();
             _transmitter.AddPayload(payload);

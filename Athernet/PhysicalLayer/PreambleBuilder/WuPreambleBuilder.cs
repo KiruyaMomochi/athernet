@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Athernet.PreambleBuilder
+namespace Athernet.PhysicalLayer.PreambleBuilder
 {
     public class WuPreambleBuilder : FunctionPreambleBuilder
     {

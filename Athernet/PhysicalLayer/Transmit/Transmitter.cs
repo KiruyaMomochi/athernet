@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
+using Athernet.PhysicalLayer.PreambleBuilder;
 using Athernet.PhysicalLayer.Transmit.Modulator;
-using Athernet.PreambleBuilder;
 using Force.Crc32;
 using NAudio.Wave;
 
@@ -22,7 +22,7 @@ namespace Athernet.PhysicalLayer.Transmit
         /// </summary>
         private BufferedWaveProvider _buffer;
 
-        private WaveOutEvent _wo;
+        private readonly WaveOutEvent _wo;
 
         /// <summary>
         /// Indicates the playing is stopped
@@ -127,20 +127,24 @@ namespace Athernet.PhysicalLayer.Transmit
         /// <returns></returns>
         private static byte[] PreProcess(byte[] arg)
         {
-            var mask = Utils.Maths.MostSignificantBitMask(arg.Length);
-            Debug.Assert(
-                arg.Length != mask,
+            // Add the length of CRC
+            var payloadLength = arg.Length + 4;
+            var mask = Utils.Maths.MostSignificantBitMask(payloadLength);
+            Trace.Assert(
+                payloadLength == mask,
                 "The length of data should be the power of 2!"
             );
 
-            var frame = new byte[arg.Length + 1 + 4];
+            var frame = new byte[payloadLength + 1];
 
             byte len;
-            for (len = 0; mask != 0; mask >>= 1, len++) { }
+            for (len = 0; mask != 1; mask >>= 1, len++) { }
+            Debug.WriteLine($"Len = {len}");
 
             frame[0] = len;
             Buffer.BlockCopy(arg, 0, frame, 1, arg.Length);
-            Crc32Algorithm.ComputeAndWriteToEnd(frame);
+            Crc32Algorithm.ComputeAndWriteToEnd(frame, 1, arg.Length);
+            Debug.WriteLine($"Crc is {BitConverter.ToString(frame[^4..])}");
             return frame;
         }
 
@@ -156,7 +160,7 @@ namespace Athernet.PhysicalLayer.Transmit
         {
             Trace.WriteLine($"P3. Playing samples {samples.Length}.");
 
-            // Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
+            Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
             var byteFrame = new byte[(_preamble.Length + samples.Length) * 4];
 
             Buffer.BlockCopy(_preamble, 0, byteFrame, 0, _preamble.Length * 4);
@@ -186,7 +190,7 @@ namespace Athernet.PhysicalLayer.Transmit
             {252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252};
 
         private static float[] _noiseSamples = null;
-        private IModulator _modulator;
+        private readonly IModulator _modulator;
 
         public void SendPing()
         {

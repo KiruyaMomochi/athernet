@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Athernet.SampleProvider;
 
 namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
@@ -11,6 +12,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
 
         protected override void SetBit(bool b)
         {
+            // Debug.Write($"{b} ");
             if (_lastBit ^ b)
                 Byte |= (byte) (1 << NBit);
             _lastBit = b;
