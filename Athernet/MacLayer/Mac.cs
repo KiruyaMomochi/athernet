@@ -136,7 +136,7 @@ namespace Athernet.MacLayer
                     break;
                 case MacType.MacpingReq:
                     Trace.WriteLine($"Mr{Address} Received MacPing req");
-                    _zeroPayload = new byte[0];
+                    _zeroPayload = Array.Empty<byte>();
                     AddData(frame.Src, frame.Dest, MacType.MacpingReply, _zeroPayload);
                     break;
                 case MacType.MacpingReply:
@@ -176,7 +176,7 @@ namespace Athernet.MacLayer
                 if (failCount++ >= 5)
                 {
                     throw new ApplicationException("Link error");
-                }
+                }   
                 Trace.WriteLine($"M2{Address} ACK not received or ReTransmit. Retransmitting.");
             }
         }
@@ -240,8 +240,7 @@ namespace Athernet.MacLayer
         private void ReplyWithAck(in MacFrame frame)
         {
             //Backoff();
-            // AddData(frame.Src, frame.Dest, MacType.Ack, frame.Payload);
-            SendPing(1);
+            AddData(frame.Src, frame.Dest, MacType.Ack, new byte[1]);
         }
 
         private void ReplyWithReTrans(in MacFrame frame)
