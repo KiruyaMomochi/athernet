@@ -1,171 +1,274 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net.Sockets;
-using System.Net;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Athernet.AppLayer.FTPClient
 {
     public class ProtocolInterpreter
     {
         public bool UnderAthernet { get; set; } = false;
+        public bool PassiveConnected { get; private set; } = false;
         public Socket Connection { get; set; }
-        public static ManualResetEvent ReceiveEvent { get; private set; }
         public Command CurrentCommand { get; private set; }
         public DataTransferProcess UserDTP { get; private set; }
-        public ProtocolInterpreter(String DestinationDomain, int DestinationPort)
+        public byte[] RecvBuffer { get; private set; }
+        public IPAddress DestinationAddress { get; private set; }
+        public int DestinationPort { get; private set; }
+
+        public ProtocolInterpreter(System.String DestinationDomain, int Port)
         {
-            ProtocolInterpreter.ReceiveEvent = new ManualResetEvent(false);
-            if (BuildConnection(DestinationDomain, DestinationPort))
+            RecvBuffer = new byte[8192];
+            DestinationAddress = Array.FindAll(
+                Dns.GetHostAddresses(DestinationDomain),
+                ip => ip.AddressFamily == AddressFamily.InterNetwork)
+            .First();
+            DestinationPort = Port;
+
+            if (BuildConnection(DestinationAddress, DestinationPort))
             {
                 Debug.WriteLine("TCP Connection Built Successfully.");
             }
+            UserDTP = null;
         }
         public void SendCommand(Command cmd)
         {
-            Debug.WriteLine($"Command about to send: {cmd.ToString()}");
+            Debug.WriteLine($"Command about to send: {cmd}");
             if (Connection.Connected)
             {
                 Connection.Send(cmd.ToBytes());
                 CurrentCommand = cmd.DeepClone();
-                Debug.WriteLine($"CurrentCommand = {CurrentCommand.ToString()}");
+                Debug.WriteLine($"CurrentCommand = {CurrentCommand}");
             }
             else
             {
                 Debug.WriteLine("Closed.");
             }
         }
-        public String TakeAction(Message Message, Command CurrentCommand = null, Command PreviousCommand = null)
+        // TODO: implement this to check the command is executed on remote successfully, return the response class is enough
+        public StatusCodeClass TakeAction(Message Message, Command CurrentCommand = null, Command PreviousCommand = null)
         {
-            bool KeepAction = true;
+            //bool KeepAction = true;
             Message ActionMessage = Message;
-            while (KeepAction)
-            {
-                // Connection Establishment
-                if (CurrentCommand == null || CurrentCommand.Empty)
-                {
-                    switch (ActionMessage.StateCode.Code)
-                    {
-                        case FtpStatusCode.ServiceTemporarilyNotAvailable:
-                            ActionMessage = ReceiveMessage();
-                            Debug.WriteLine(ActionMessage.FullMessage);
-                            break;
-                        case FtpStatusCode.SendUserCommand:
-                        case FtpStatusCode.ServiceNotAvailable:
-                        default:
-                            Debug.WriteLine(ActionMessage.FullMessage);
-                            break;
-                    }
-                }
-                else
-                {
-                    switch (CurrentCommand.Name)
-                    {
-                        //case "PASV":
-                        //    ProcessPassiveRequest(ActionMessage.FullMessage);
-                        //    break;
-                        //case "LIST":
-                        //    ProcessListRequest(ActionMessage.FullMessage);
-                        //    break;
-                        //case "RETR":
-                        //    ProcessRetrieveRequest(ActionMessage.FullMessage);
-                        //    break;
-                        case "USER":
-                        case "PASS":
-                        case "PWD":
-                        case "CWD":
-                        default:
-                            Debug.WriteLine(ActionMessage.FullMessage);
-                            break;
-                    }
-                }
 
-                KeepAction = KeepActionRequired(ActionMessage);
+            // Connection Establishment
+            if (CurrentCommand == null || CurrentCommand.Empty)
+            {
+                return ActionMessage.GetCodeClass();
+                switch (ActionMessage.StatusCode)
+                {
+                    // TODO: Check success for each one
+                    case FtpStatusCode.ServiceTemporarilyNotAvailable:
+                        Debug.WriteLine(ActionMessage.FullMessage);
+                        break;
+                    case FtpStatusCode.SendUserCommand:
+                    case FtpStatusCode.ServiceNotAvailable:
+                    default:
+                        Debug.WriteLine(ActionMessage.FullMessage);
+                        break;
+                }
             }
-            return ActionMessage.FullMessage;
+            else
+            {
+                switch (CurrentCommand.Name)
+                {
+                    case "PASV":
+                        return ProcessPassiveConnectionRequest(ActionMessage, PreviousCommand);
+                    case "LIST":
+                        return ProcessListRequest(ActionMessage, PreviousCommand);
+                    case "RETR":
+                        return ProcessRetrieveRequest(ActionMessage, PreviousCommand);
+                    case "USER":
+                    case "PASS":
+                    case "PWD":
+                    case "CWD":
+                    default:
+                        return ActionMessage.GetCodeClass();
+                        //Debug.WriteLine(ActionMessage.FullMessage);
+                }
+            }
+            // Should not reached
+            throw new InvalidOperationException();
+        }
+        public StatusCodeClass ProcessPassiveConnectionRequest(Message ActionMessage,Command PreviousCommand = null)
+        {
+            Debug.WriteLine(ActionMessage.StatusCode);
+            switch (ActionMessage.StatusCode)
+            {
+                // 2XX
+                case FtpStatusCode.EnteringPassive:
+                    PassiveConnected = true;
+                    if (UserDTP != null)
+                    {
+                        if (UserDTP.Connection.Connected)
+                            UserDTP.Connection.Close();
+                        UserDTP = null; // Release previously-allocated unwanted resources/connections
+                    }
+                    //ActionMessage.
+                    string[] ParsedResult = Regex.Replace(
+                            ActionMessage.FullMessage,
+                            "[^0-9]",
+                            " ")
+                        .Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries)
+                        .TakeLast(6)
+                        .ToArray();
+                    var AddressString = ParsedResult[0] + "." + ParsedResult[1] + "." + ParsedResult[2] + "." + ParsedResult[3];
+                    Debug.WriteLine(ParsedResult);
+                    Debug.WriteLine(AddressString);
+                    IPAddress Address = IPAddress.Parse(AddressString);
+                    int Port = int.Parse(ParsedResult[4]) * 256 + int.Parse(ParsedResult[5]);
+                    Debug.WriteLine(Port);
+                    UserDTP = new DataTransferProcess(Address, Port);
+                    return ActionMessage.GetCodeClass();
+                    // TODO: Build Connection here!
+                    // Reminder: If previously built. then TERMINATE IT and build another one!
+                // 5XX + 421(ServiceNotAvailable)
+                case FtpStatusCode.ServiceNotAvailable: // 421
+                case FtpStatusCode.CommandSyntaxError:
+                case FtpStatusCode.ArgumentSyntaxError:
+                case FtpStatusCode.CommandNotImplemented:
+                case FtpStatusCode.NotLoggedIn:
+                    PassiveConnected = false;
+                    return ActionMessage.GetCodeClass();
+                default:
+                    throw new InvalidOperationException();
+            }
+            //if (ActionMessage.StateCode.Code == FtpStatusCode.EnteringPassive)
+            throw new InvalidOperationException();
         }
 
-        public bool KeepActionRequired(Message Message)
+        public StatusCodeClass ProcessRetrieveRequest(Message ActionMessage, Command PreviousCommand = null)
         {
-            return (Message.StateCode.GetClass() == StateCodeClass.TransientNegativeCompletionReply);
+            switch (ActionMessage.StatusCode)
+            {
+                // 1XX
+                case FtpStatusCode.DataAlreadyOpen:
+                case FtpStatusCode.OpeningData:
+                case FtpStatusCode.RestartMarker:
+                    //PassiveConnected = false;
+                    Debug.WriteLine("receiving data...");
+                    if (UserDTP.TransmissionTask == null)
+                    {
+                        UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
+                    }
+                    return ActionMessage.GetCodeClass();
+                    // 2XX
+                case FtpStatusCode.ClosingData:
+                case FtpStatusCode.FileActionOK:
+                    UserDTP.Connection.Disconnect(false);
+                    UserDTP.TransmissionTask.Wait();
+                    //Debug.WriteLine($"Task.Run(UserDTP.ReceiveData) is completed? {task.IsCompleted}")
+                    Console.WriteLine($"{UserDTP.RecvMsg.Length * 8} bytes ({UserDTP.RecvMsg.Length * 8 / 1024.0} KiB) received.");
+                    Console.WriteLine("Choose the path to save: (Default to C:\\%AppData%\\)");
+                    var SavePath = Console.ReadLine();
+                    if (SavePath == null)
+                    {
+                        SavePath = "C:\\%AppData%\\";
+                    }
+                    Debug.WriteLine($"Save filename: {CurrentCommand.Argument}");
+                    System.IO.StreamWriter file = new System.IO.StreamWriter(SavePath+CurrentCommand.Argument);
+                    file.WriteLine(UserDTP.RecvMsg);
+                    file.Close();
+                    Console.WriteLine($"File \'{CurrentCommand.Argument}\' saved at {SavePath}.");
+                    Debug.WriteLine("data received!");
+                    Debug.WriteLine($"{UserDTP.RecvMsg.Length} characters received");
+                    //PassiveConnected = true;
+                    return ActionMessage.GetCodeClass();
+                // 4XX
+                case FtpStatusCode.CantOpenData:
+                case FtpStatusCode.ConnectionClosed:
+                case FtpStatusCode.ActionAbortedLocalProcessingError:
+                case FtpStatusCode.ActionNotTakenFileUnavailableOrBusy:
+                case FtpStatusCode.ServiceNotAvailable:
+                // 5XX
+                case FtpStatusCode.CommandSyntaxError:
+                case FtpStatusCode.ArgumentSyntaxError:
+                case FtpStatusCode.NotLoggedIn:
+                case FtpStatusCode.ActionNotTakenFileUnavailable:
+                    PassiveConnected = false;
+                    return ActionMessage.GetCodeClass();
+                default:
+                    throw new InvalidOperationException();
+            }
+            throw new InvalidOperationException();
+        }
+        public StatusCodeClass ProcessListRequest(Message ActionMessage, Command PreviousCommand = null)
+        {
+            //x = Task.Run(() => { return 1; });
+            //X.wait()
+            switch (ActionMessage.StatusCode)
+            {
+                // 1XX
+                case FtpStatusCode.DataAlreadyOpen:
+                case FtpStatusCode.OpeningData:
+                    // TODO here!
+                    Debug.WriteLine("receiving data...");
+                    if (UserDTP.TransmissionTask == null)
+                    {
+                        UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
+
+                    }
+                    return ActionMessage.GetCodeClass();
+                    break;
+                // 2XX
+                case FtpStatusCode.ClosingData:
+                case FtpStatusCode.FileActionOK:
+                    UserDTP.Connection.Disconnect(false);
+                    UserDTP.TransmissionTask.Wait();
+                    //Debug.WriteLine($"Task.Run(UserDTP.ReceiveData) is completed? {task.IsCompleted}")
+                    Console.WriteLine($"{UserDTP.RecvMsg}");
+                    Debug.WriteLine("data received...");
+                    Debug.WriteLine($"{UserDTP.RecvMsg.Length} characters received.");
+
+                    return ActionMessage.GetCodeClass();
+                // 4XX
+                case FtpStatusCode.CantOpenData:
+                case FtpStatusCode.ConnectionClosed:
+                case FtpStatusCode.ActionAbortedLocalProcessingError:
+                case FtpStatusCode.ActionNotTakenFileUnavailableOrBusy:
+                case FtpStatusCode.ServiceNotAvailable:
+                // 5XX
+                case FtpStatusCode.CommandSyntaxError:
+                case FtpStatusCode.ArgumentSyntaxError:
+                case FtpStatusCode.CommandNotImplemented:
+                case FtpStatusCode.NotLoggedIn:
+                    PassiveConnected = false;
+                    return ActionMessage.GetCodeClass();
+                default:
+                    throw new InvalidOperationException();
+
+            }
+        }
+
+        public static bool KeepActionRequired(Message Message)
+        {
+            return (Message.GetCodeClass() == StatusCodeClass.TransientNegativeCompletionReply);
         }
         public Message ReceiveMessage()
         {
-            Encoding ASCII = Encoding.ASCII;
-            StateObject State = new StateObject();
-            //int BytesRecv = Connection.Receive(RecvBuffer);
-            State.WorkSocket = Connection;
-            ReceiveEvent.Reset();
-            Debug.WriteLine("About to receive message");
-            Connection.BeginReceive(
-                buffer: State.Buffer,
-                offset: 0,
-                size: StateObject.BufferSize,
-                socketFlags: SocketFlags.None,
-                callback: new AsyncCallback(ReadCallback),
-                state: State);
-            ReceiveEvent.WaitOne(new TimeSpan(hours:0, minutes:0, seconds:1));
-            var ReceivedMessage = State.StringBuffer.ToString();
-            Debug.WriteLine($"Received: \"{ReceivedMessage}\" Code: ");
-            var CodeText = State.StringBuffer.ToString().Take(StatusCode.LengthNumber).ToArray().ToString();
-            var RecvMsg = new Message(CodeText, ReceivedMessage);
-            Debug.WriteLine(CodeText);
+            Message RecvMsg;
+            //for (var i = 0; i < 2; i++)
+            {
+                int BytesRecv = Connection.Receive(RecvBuffer);
+
+                string ReceivedMessage = Encoding.ASCII.GetString(RecvBuffer.Take(BytesRecv).ToArray());
+                string CodeText = new string(ReceivedMessage.Take(StatusCode.LengthNumber).ToArray());
+                RecvMsg = new Message(CodeText, ReceivedMessage);
+                Debug.WriteLine($"Received: \"{RecvMsg.FullMessage}\" Code: {RecvMsg.StatusCode}");
+            }
             return RecvMsg;
         }
-        public static void ReadCallback(IAsyncResult AsyncResult)
-        {
-            try
-            {
-                Debug.WriteLine("Try to end receiving...");
-                StateObject State = (StateObject)AsyncResult.AsyncState;
-                Socket WorkSocket = State.WorkSocket;
-                int ReadBytes = WorkSocket.EndReceive(AsyncResult);
-                Debug.WriteLine($"Received {ReadBytes} Bytes... Payload = \"{Encoding.ASCII.GetString(State.Buffer, 0, ReadBytes)}\"");
-
-                
-                if (ReadBytes > 0)
-                {
-                    Debug.WriteLine($"Receiving...");
-                    WorkSocket.BeginReceive(
-                        buffer: State.Buffer,
-                        offset: 0,
-                        size: StateObject.BufferSize,
-                        socketFlags: SocketFlags.None,
-                        callback: new AsyncCallback(ReadCallback),
-                        state: State);
-                    State.StringBuffer.Append(Encoding.ASCII.GetString(State.Buffer, 0, ReadBytes));
-                    Debug.WriteLine($"One Callback done.");
-                }
-                //else
-                //{
-                //    Debug.Write($"Received.");
-
-                //    if (State.StringBuffer.Length > 1)
-                //    {
-                //        // All data received when no more bytes get received
-                //        ProtocolInterpreter.ReceivedFullMessage = State.StringBuffer.ToString();
-                //    }
-                //    ProtocolInterpreter.ReceiveEvent.Set();
-                //}
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.ToString());
-            }
-        }
-        public bool BuildConnection(String DestinationDomain, int DestinationPort)
+        public bool BuildConnection(IPAddress DestinationAddress, int DestinationPort)
         {
             if (!UnderAthernet)
             {
                 //Send Command Under Internet
-                var DestinationAddress = Array.FindAll(
-                        Dns.GetHostAddresses(DestinationDomain),
-                        ip => ip.AddressFamily == AddressFamily.InterNetwork)
-                    .First();
                 Debug.WriteLine($"Destination address : {DestinationAddress}");
                 Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 Connection.Connect(new IPEndPoint(DestinationAddress, DestinationPort));
@@ -180,81 +283,8 @@ namespace Athernet.AppLayer.FTPClient
             }
         }
     }
-    public class StateObject
-    {
-        // Size of receive buffer.  
-        public const int BufferSize = 1024;
 
-        // Receive buffer.  
-        public byte[] Buffer = new byte[BufferSize];
 
-        // Received data string.
-        public StringBuilder StringBuffer = new StringBuilder();
-
-        // Client socket.
-        public Socket WorkSocket = null;
-    }
-
-    public class StatusCode
-    {
-        //static public FtpStatusCode FTPState;
-
-        static public int LengthNumber = 3;
-        public FtpStatusCode Code { get; set; }
-        public StatusCode(int Number)
-        {
-            if (!IsFtpStatusCode(Number))
-            {
-                Code = FtpStatusCode.Undefined;
-            }
-            else
-            {
-                Code = (FtpStatusCode) Number;
-            }
-        }
-        public StatusCode(String NumberString)
-        {
-            int result;
-            bool IsNumber = int.TryParse(NumberString, out result);
-            if (IsNumber && !IsFtpStatusCode(result))
-            {
-                Code = (FtpStatusCode) result;
-            }
-            else
-            {
-                Code = FtpStatusCode.Undefined;
-            }
-        }
-        public StateCodeClass GetClass()
-        {
-            return (StateCodeClass) ((int) Code % 100);
-        }
-        public bool IsFtpStatusCode(int Number)
-        {
-            return Enum.IsDefined(typeof(FtpStatusCode), Number) && Number != (int)FtpStatusCode.Undefined;
-        }
-    }
-
-    public enum StateCodeClass : int
-    {
-        PositivePreliminaryReply = 1,
-        PositiveCompletionReply = 2,
-        PositiveIntermediateReply = 3,
-        TransientNegativeCompletionReply = 4,
-        PermanentNegativeCompletionReply = 5
-    }
-
-    public class Message
-    {
-        public StatusCode StateCode { get; set; }
-        public String FullMessage { get; set; }
-
-        public Message(String CodeText, String FullText)
-        {
-            StateCode = new StatusCode(CodeText);
-            FullMessage = FullText;
-        }
-    }
 
 
 }

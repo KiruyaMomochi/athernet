@@ -8,6 +8,6 @@ namespace Athernet.AppLayer.FTPClient
 {
     class Utils
     {
-        public const String EOL = "\r\n";
+        public const System.String EOL = "\r\n";
     }
 }
