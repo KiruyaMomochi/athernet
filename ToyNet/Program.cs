@@ -9,7 +9,8 @@ namespace ToyNet
     {
         private static void Main(string[] args)
         {
-            UserInterface.Shell();
+            var CLI = new UserInterface("140.110.96.68");
+            CLI.Shell();
         }
     }
 }

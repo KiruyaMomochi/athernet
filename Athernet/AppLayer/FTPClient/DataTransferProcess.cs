@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace Athernet.AppLayer.FTPClient
 {
-    class DataTransferProcess
+    public class DataTransferProcess
     {
+        public DataTransferProcess()
+        {
+
+        }
     }
 }
