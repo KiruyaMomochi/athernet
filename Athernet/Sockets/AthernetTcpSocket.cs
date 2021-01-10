@@ -135,6 +135,9 @@ namespace Athernet.Sockets
                     SendTcpPacket(TcpControlBits.Acknowledgment | TcpControlBits.Fin);
                     TcpState = TcpState.LastAck;
                     break;
+                case TcpState.Established when (tcpDatagram.IsSynchronize && tcpDatagram.IsAcknowledgment):
+                    SendTcpPacket(TcpControlBits.Acknowledgment);
+                    break;
                 case TcpState.Established when tcpDatagram.IsFin:
                     SendTcpPacket(TcpControlBits.Acknowledgment);
                     _acknowledgmentNumber += 1;
