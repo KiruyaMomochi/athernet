@@ -11,7 +11,7 @@ namespace Athernet.IPLayer.Packet
         public static IcmpPacket Parse(byte[] packet)
         {
             var header = packet[..IcmpHeader.IcmpHeaderLength];
-            return new IcmpPacket()
+            return new IcmpPacket
             {
                 Header = IcmpHeader.Create(header),
                 Payload = packet[IcmpHeader.IcmpHeaderLength..]

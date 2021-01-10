@@ -64,7 +64,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         /// <summary>
         /// The real length of payload.
         /// </summary>
-        private uint? _lastPayloadBytes;
+        private uint _lastPayloadBytes;
 
         private readonly List<byte> _frame;
 
@@ -246,8 +246,8 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         /// </summary>
         private void UpdateComplete()
         {
-            // Complete when no more frame bytes
-            if (_lastPayloadBytes == 0)
+            // Complete when no more frame bytes and it's not the first bit
+            if (_lastPayloadBytes == 0 && _lenIdx > 1)
             {
                 // Utils.Debug.WriteTempWav(_samples.ToArray(), "recv_body.wav");
                 //_source.SkipLast(0);
@@ -283,6 +283,8 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
             NBit = 0;
             Byte = 0;
         }
+        
+        private int _lenIdx = 0;
 
         /// <summary>
         /// Advance a byte.
@@ -293,12 +295,22 @@ namespace Athernet.PhysicalLayer.Receive.Rx.Demodulator
         {
             // Debug.Write($"-> {Byte:X} Offset: {_offset}\n");
 
-            // Check if it is the first byte
-            if (_lastPayloadBytes == null)
+            // Check if it is the first two byte
+            if (_lenIdx < 2)
             {
-                // If true, we set _lastPayloadBytes to 1 << _byte
-                _lastPayloadBytes = (uint) 1 << Byte;
-                Debug.WriteLine($"Payload Bytes: {_lastPayloadBytes}", GetType());
+                // If true, we set _lastPayloadBytes to length of mac data
+                switch (_lenIdx)
+                {
+                    case 0:
+                        _lastPayloadBytes = (uint) Byte << 8;
+                        break;
+                    case 1:
+                        _lastPayloadBytes |= Byte;
+                        Debug.WriteLine($"Payload Bytes: {_lastPayloadBytes}", GetType());
+                        break;
+                }
+
+                _lenIdx++;
                 // If the result is more than MaxBytes,
                 // We complete the list directly.
                 if (_lastPayloadBytes > _maxPayloadBytes) Complete();

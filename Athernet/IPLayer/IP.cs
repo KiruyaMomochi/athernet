@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using Athernet.IPLayer.Packet;
@@ -8,9 +10,18 @@ namespace Athernet.IPLayer
 {
     public class IP
     {
-        public IPAddress IpAddress;
-        private Mac _mac;
+        public IPAddress IpAddress { get; }
+
+        public delegate byte ArpDelegate(IPAddress address);
+
+        public readonly ArpDelegate Arp = address =>
+        {
+            var client = IPAddress.Parse("192.168.1.2");
+            return Equals(address, client) ? (byte) 1 : (byte) 0;
+        };
         
+        private readonly Mac _mac;
+
         public int PlayDeviceNumber => _mac.PlayDeviceNumber;
         public int RecordDeviceNumber => _mac.RecordDeviceNumber;
 
@@ -21,10 +32,11 @@ namespace Athernet.IPLayer
             SubscribeMac();
         }
 
-        public IP(IPAddress ipAddress, byte macAddress, int playDeviceNumber = 0, int recordDeviceNumber = 0,
+        public IP(IPAddress ipAddress, int playDeviceNumber = 0, int recordDeviceNumber = 0,
             int maxDataBytes = 1017)
         {
             IpAddress = ipAddress;
+            var macAddress = Arp(ipAddress);
             _mac = new Mac(macAddress, playDeviceNumber, recordDeviceNumber, maxDataBytes)
             {
                 NeedAck = false
@@ -49,20 +61,19 @@ namespace Athernet.IPLayer
             var packet = ipv4Packet.GetProtocolPacketBytes();
             var length = packet.Length + 7;
             var msb = Athernet.Utils.Maths.MostSignificantBitMask(length);
-            if (length != msb)
-            {
-                msb <<= 1;
-            }
+            if (length > msb) msb <<= 1;
 
-            _mac.AddPayload(_mac.Address == 1 ? (byte) 2 : (byte) 1, packet.Concat(new byte[msb - length]).ToArray());
+            _mac.AddPayload(
+                Arp(ipv4Packet.Header.DestinationAddress),
+                packet.Concat(new byte[msb - length]).ToArray()
+            );
         }
 
         protected virtual void OnPacketAvailable(Ipv4Packet packet)
         {
-            PacketAvailable?.Invoke(this, new PacketAvailableEventArgs(){Packet = packet});
+            PacketAvailable?.Invoke(this, new PacketAvailableEventArgs {Packet = packet});
         }
-        
-        
+
         public void StartReceive() => _mac.StartReceive();
         public void StopReceive() => _mac.StopReceive();
     }

@@ -12,7 +12,7 @@ namespace Athernet.IPLayer.Header
     {
         private ushort _ipChecksum;
 
-        public static int Ipv4HeaderLength = 20;
+        public const int Ipv4HeaderLength = 20;
         public override int HeaderLength => Ipv4HeaderLength;
 
         /// <summary>
@@ -21,11 +21,11 @@ namespace Athernet.IPLayer.Header
         public Ipv4Header()
         {
             Version = 4;
-            Length = (byte) Ipv4HeaderLength; // Set the property so it will convert properly
+            Length = Ipv4HeaderLength; // Set the property so it will convert properly
             TypeOfService = 0;
             Id = 0;
             Offset = 0;
-            Ttl = 1;
+            Ttl = 2;
             Protocol = 0;
             Checksum = 0;
             SourceAddress = IPAddress.Any;
@@ -195,7 +195,7 @@ namespace Athernet.IPLayer.Header
         /// <param name="header">The encapsulated header</param>
         /// <param name="payLoad">The encapsulated data</param>
         /// <returns>A byte array of the IPv4 header and payload</returns>
-        public byte[] GetProtocolPacketBytes(TcpHeader header, byte[] payLoad)
+        public byte[] GetProtocolPacketBytes(TransportHeader header, ReadOnlySpan<byte> payLoad)
         {
             switch (header)
             {
@@ -205,6 +205,10 @@ namespace Athernet.IPLayer.Header
                     break;
                 case IcmpHeader icmpHeader:
                     Protocol = ProtocolType.Icmp;
+                    break;
+                case TcpHeader tcpHeader:
+                    tcpHeader.Ipv4PacketHeader = this;
+                    Protocol = ProtocolType.Tcp;
                     break;
                 default:
                     throw new IndexOutOfRangeException();
@@ -242,6 +246,11 @@ namespace Athernet.IPLayer.Header
             memoryStream.Write(BitConverter.GetBytes(_ipChecksum));
 
             return ipv4Packet;
+        }
+
+        public override string ToString()
+        {
+            return $"{SourceAddress} -> {DestinationAddress} {Protocol}";
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Athernet.IPLayer.Packet
         public static UdpPacket Parse(byte[] packet)
         {
             var header = packet[..UdpHeader.UdpHeaderLength];
-            return new UdpPacket()
+            return new UdpPacket
             {
                 Header = UdpHeader.Create(header),
                 Payload = packet[UdpHeader.UdpHeaderLength..]

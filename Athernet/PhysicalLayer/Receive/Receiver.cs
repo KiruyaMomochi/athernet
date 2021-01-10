@@ -76,7 +76,7 @@ namespace Athernet.PhysicalLayer.Receive
             Trace.WriteLine("-R- Starting recorder.");
 
             _recorder?.Dispose();
-            _recorder = new WaveInEvent()
+            _recorder = new WaveInEvent
             {
                 WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1),
                 DeviceNumber = DeviceNumber,

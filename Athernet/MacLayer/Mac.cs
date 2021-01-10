@@ -16,14 +16,12 @@ namespace Athernet.MacLayer
     /// </remarks>
     public class Mac
     {
-        public Dictionary<IPEndPoint, IPEndPoint> NatTable;
-
         public byte Address { get; }
 
         public int MaxDataBytes => _physical.MaxDataBytes;
 
-        public bool SendAck { get; set; } = true;
-        public bool NeedAck { get; set; } = true;
+        public bool SendAck { get; set; } = false;
+        public bool NeedAck { get; set; } = false;
 
         public bool SendReTrans { get; set; } = false;
 
@@ -36,8 +34,8 @@ namespace Athernet.MacLayer
         private byte[] _ackFrame;
 
         private readonly EventWaitHandle _pingEwh = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private bool _isPing = false;
-        private bool _isAck = false;
+        private bool _isPing;
+        private bool _isAck;
         
         public event EventHandler PacketDetected
         {
@@ -53,7 +51,6 @@ namespace Athernet.MacLayer
             _physical = physical;
             // _ackFrame = new byte[PayloadBytes];
             SubscribePhysical();
-            InitNatTable();
         }
 
         public Mac(byte address, int playDeviceNumber = 0, int recordDeviceNumber = 0, int maxDataBytes = 1020)
@@ -61,15 +58,6 @@ namespace Athernet.MacLayer
             _physical = new Physical(playDeviceNumber, recordDeviceNumber, maxDataBytes + 3);
             Address = address;
             SubscribePhysical();
-            InitNatTable();   
-        }
-
-        private void InitNatTable()
-        {
-            NatTable = new Dictionary<IPEndPoint, IPEndPoint>
-            {
-                {IPEndPoint.Parse("192.168.1.1:1234"), IPEndPoint.Parse("10.20.223.177:2333")}
-            };
         }
 
         private void SubscribePhysical()
@@ -253,6 +241,6 @@ namespace Athernet.MacLayer
         public void StopReceive() => _physical.StopReceive();
 
         private void OnDataAvailable(byte[] data) =>
-            DataAvailable?.Invoke(this, new DataAvailableEventArgs() {Data = data});
+            DataAvailable?.Invoke(this, new DataAvailableEventArgs {Data = data});
     }
 }

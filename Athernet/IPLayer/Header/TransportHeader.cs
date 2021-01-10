@@ -1,6 +1,8 @@
+using System;
+
 namespace Athernet.IPLayer.Header
 {
-    public abstract class TcpHeader: ProtocolHeader
+    public abstract class TransportHeader: ProtocolHeader
     {
         /// <summary>
         /// This abstracted method returns a byte array that is the protocl
@@ -11,7 +13,7 @@ namespace Athernet.IPLayer.Header
         /// <param name="payLoad">The byte array of the data encapsulated in this header</param>
         /// <returns>A byte array of the serialized header and payload</returns>
         public abstract byte[] GetProtocolPacketBytes(
-            byte[] payLoad
+            ReadOnlySpan<byte> payLoad
         );
     }
 }

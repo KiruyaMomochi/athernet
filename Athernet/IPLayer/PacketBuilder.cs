@@ -13,12 +13,12 @@ namespace Athernet.IPLayer
         /// the UDP packet is passed as the second parameter.
         /// </summary>
         /// <param name="ipv4Header">The IPv4 header to build the packet from</param>
-        /// <param name="tcpHeader">The TCP header to build the packet from</param>
+        /// <param name="transportHeader">The TCP header to build the packet from</param>
         /// <param name="payLoad">Data payload appearing after all the headers.</param>
         /// <returns>Returns a byte array representing the entire packet</returns>
-        public static byte[] BuildPacket(Ipv4Header ipv4Header, TcpHeader tcpHeader, byte[] payLoad)
+        public static byte[] BuildPacket(Ipv4Header ipv4Header, TransportHeader transportHeader, byte[] payLoad)
         {
-            return ipv4Header.GetProtocolPacketBytes(tcpHeader, payLoad);
+            return ipv4Header.GetProtocolPacketBytes(transportHeader, payLoad);
         }
     }
 }

@@ -7,48 +7,73 @@ namespace Athernet.IPLayer.Packet
 {
     public class Ipv4Packet : ProtocolPacket
     {
+        private Ipv4Header _header;
+
         public Ipv4Packet()
         {
             Header = new Ipv4Header();
             Payload = new byte[128]; // Default to be zero
         }
 
-        public Ipv4Header Header { get; set; }
-        public TcpHeader TcpHeader { get; set; }
+        public static Ipv4Packet Create(IPEndPoint sourceEndpoint, IPEndPoint destEndPoint, ProtocolType protocolType,
+            byte[] payload)
+        {
+            return new()
+            {
+                Header = new Ipv4Header
+                {
+                    SourceAddress = sourceEndpoint.Address,
+                    DestinationAddress = destEndPoint.Address
+                },
+                TransportHeader = protocolType switch
+                {
+                    ProtocolType.Udp => new UdpHeader
+                    {
+                        SourcePort = (ushort) sourceEndpoint.Port,
+                        DestinationPort = (ushort) destEndPoint.Port
+                    },
+                    _ => throw new NotImplementedException()
+                },
+                Payload = payload
+            };
+        }
+
+        public Ipv4Header Header
+        {
+            get => _header;
+            set
+            {
+                if (value.Version != 4)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), "The version in header must be 4!");
+                }
+
+                _header = value;
+            }
+        }
+
+        public TransportHeader TransportHeader { get; set; }
         public byte[] Payload { get; set; }
 
-        public void SetHeader(IPAddress ipSourceAddress, IPAddress ipDestAddress, int messageSize)
-        {
-            Header.Version = 4;
-            Header.Protocol = ProtocolType.Udp;
-            Header.Ttl = 2;
-            Header.Offset = 0;
-            Header.Length = (byte)Ipv4Header.Ipv4HeaderLength;
-            Header.TotalLength = System.Convert.ToUInt16(
-                Ipv4Header.Ipv4HeaderLength + UdpHeader.UdpHeaderLength + messageSize);
-            Header.SourceAddress = ipSourceAddress;
-            Header.DestinationAddress = ipDestAddress;
-        }
-        
         public static Ipv4Packet Parse(byte[] packet)
         {
             var ret = new Ipv4Packet();
             var header = packet[..Ipv4Header.Ipv4HeaderLength];
-            
+
             ret.Header = Ipv4Header.Create(header);
-            
+
             var ipv4Payload = packet[ret.Header.HeaderLength..ret.Header.TotalLength];
-            
+
             switch (ret.Header.Protocol)
             {
                 case ProtocolType.Icmp:
                     var icmpPacket = IcmpPacket.Parse(ipv4Payload);
-                    ret.TcpHeader = icmpPacket.Header;
+                    ret.TransportHeader = icmpPacket.Header;
                     ret.Payload = icmpPacket.Payload;
                     break;
                 case ProtocolType.Udp:
                     var udpPacket = UdpPacket.Parse(ipv4Payload);
-                    ret.TcpHeader = udpPacket.Header;
+                    ret.TransportHeader = udpPacket.Header;
                     ret.Payload = udpPacket.Payload;
                     break;
                 default:
@@ -58,6 +83,12 @@ namespace Athernet.IPLayer.Packet
             return ret;
         }
 
-        public byte[] GetProtocolPacketBytes() => Header.GetProtocolPacketBytes(TcpHeader, Payload);
+        public byte[] GetProtocolPacketBytes() => Header.GetProtocolPacketBytes(TransportHeader, Payload);
+
+        public override string ToString()
+        {
+            return $"[IPv4] {Header}\n" +
+                   $"       {TransportHeader}";
+        }
     }
 }

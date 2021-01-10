@@ -8,7 +8,7 @@ namespace Athernet.IPLayer.Header
     /// <summary>
     /// The ICMP protocol header used with the IPv4 protocol.
     /// </summary>
-    public class IcmpHeader: TcpHeader
+    public class IcmpHeader: TransportHeader
     {
         private byte _icmpType;                   // ICMP message type
         private ushort _icmpId;                     // Message ID
@@ -98,7 +98,7 @@ namespace Athernet.IPLayer.Header
         /// </summary>
         /// <param name="payLoad">Data payload of the ICMP packet</param>
         /// <returns>Byte array representing the ICMP packet and payload</returns>
-        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        public override byte[] GetProtocolPacketBytes(ReadOnlySpan<byte> payLoad)
         {
             var icmpPacket = new byte[IcmpHeaderLength + payLoad.Length];
             var byteWriter = new MemoryStream(icmpPacket);

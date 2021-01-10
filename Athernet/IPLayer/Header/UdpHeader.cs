@@ -8,11 +8,11 @@ namespace Athernet.IPLayer.Header
     /// <summary>
     /// Class that represents the UDP protocol.
     /// </summary>
-    public class UdpHeader : TcpHeader
+    public class UdpHeader : TransportHeader
     {
-        public Ipv4Header Ipv4PacketHeader;
+        internal Ipv4Header Ipv4PacketHeader;
 
-        public static int UdpHeaderLength = 8;
+        public static readonly int UdpHeaderLength = 8;
         public override int HeaderLength => UdpHeaderLength;
 
         /// <summary>
@@ -77,18 +77,16 @@ namespace Athernet.IPLayer.Header
         private ushort _udpChecksum;
 
         /// <summary>
-        /// 
+        /// Create a UDP Header from the Packet
         /// </summary>
-        /// <param name="udpData"></param>
-        /// <returns></returns>
-        public static UdpHeader Create(byte[] udpData)
+        public static UdpHeader Create(byte[] udpPacket)
         {
             var udpPacketHeader = new UdpHeader
             {
-                _sourcePortRaw = BitConverter.ToUInt16(udpData, 0),
-                _destinationPortRaw = BitConverter.ToUInt16(udpData, 2),
-                _lengthRaw = BitConverter.ToUInt16(udpData, 4),
-                _udpChecksum = BitConverter.ToUInt16(udpData, 6)
+                _sourcePortRaw = BitConverter.ToUInt16(udpPacket, 0),
+                _destinationPortRaw = BitConverter.ToUInt16(udpPacket, 2),
+                _lengthRaw = BitConverter.ToUInt16(udpPacket, 4),
+                _udpChecksum = BitConverter.ToUInt16(udpPacket, 6)
             };
 
             return udpPacketHeader;
@@ -125,9 +123,9 @@ namespace Athernet.IPLayer.Header
         /// </summary>
         /// <param name="payLoad">Payload that follows the UDP header</param>
         /// <returns></returns>
-        public override byte[] GetProtocolPacketBytes(byte[] payLoad)
+        public override byte[] GetProtocolPacketBytes(ReadOnlySpan<byte> payLoad)
         {
-            Length = (ushort) (UdpHeaderLength + payLoad.Length);
+            Length = (ushort) (HeaderLength + payLoad.Length);
             
             byte[] pseudoHeader;
             
@@ -146,7 +144,7 @@ namespace Athernet.IPLayer.Header
                 throw new NullReferenceException("Ipv4PacketHeader");
             }
 
-            var udpPacket = new byte[12 + UdpHeaderLength + payLoad.Length];
+            var udpPacket = new byte[pseudoHeader.Length + HeaderLength + payLoad.Length];
             var memoryStream = new MemoryStream(udpPacket);
 
             memoryStream.Write(pseudoHeader);
@@ -161,6 +159,11 @@ namespace Athernet.IPLayer.Header
             memoryStream.Write(BitConverter.GetBytes(_udpChecksum));
             
             return udpPacket[12..];
+        }
+
+        public override string ToString()
+        {
+            return $"(UDP) {SourcePort} -> {DestinationPort} Len: {Length}";
         }
     }
 }

@@ -110,7 +110,7 @@ namespace Athernet.PhysicalLayer.Receive.Rx
         {
             _detector = new CrossCorrelationDetector(_preamble);
 
-            _recorder = new WaveInEvent()
+            _recorder = new WaveInEvent
             {
                 DeviceNumber = deviceNumber,
                 WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(_demodulator.SampleRate, 1)
@@ -147,18 +147,6 @@ namespace Athernet.PhysicalLayer.Receive.Rx
             // TODO: use correct Rx way
 
             var sub = observable.Replay().RefCount();
-            //sub.Connect();
-            //var last = sub.Take(2 * _preamble.Length + _detector.WindowSize)
-            //    .ToArray()
-            //    .Select(x =>
-            //    {
-            //        var pos = _detector.Detect(x);
-            //        if (pos != -1)
-            //        {
-            //            Debug.WriteLine($"Detected x[{x.Length}] at {pos} in {WindowSize}");
-            //        }
-            //        return pos != -1 ? x.Skip(pos + 1).ToObservable().Concat(sub) : null;
-            //    });
 
             var last = sub.Take(2 * _preamble.Length + _detector.WindowSize)
                 .ToArray()

@@ -46,7 +46,7 @@ namespace Athernet.PhysicalLayer.Transmit
             preambleBuilder.SampleRate = _modulator.SampleRate;
             _preamble = preambleBuilder.Build();
             
-            _wo = new WaveOutEvent()
+            _wo = new WaveOutEvent
             {
                 DeviceNumber = deviceNumber
             };
@@ -55,7 +55,7 @@ namespace Athernet.PhysicalLayer.Transmit
 
         public Transmitter(int deviceNumber)
         {
-            _modulator = new DpskModulator()
+            _modulator = new DpskModulator
             {
                 BitDepth = 3,
                 Channel = 1,
@@ -64,7 +64,7 @@ namespace Athernet.PhysicalLayer.Transmit
 
             _preamble = new WuPreambleBuilder(_modulator.SampleRate, 0.015f).Build();
             
-            _wo = new WaveOutEvent()
+            _wo = new WaveOutEvent
             {
                 DeviceNumber = deviceNumber
             };
@@ -129,21 +129,26 @@ namespace Athernet.PhysicalLayer.Transmit
         {
             // Add the length of CRC
             var payloadLength = arg.Length + 4;
-            var mask = Utils.Maths.MostSignificantBitMask(payloadLength);
+            // var mask = Utils.Maths.MostSignificantBitMask(payloadLength);
+            // Trace.Assert(
+            //     payloadLength == mask,
+            //     $"The length of data is {payloadLength}, but should be power of 2!"
+            // );
             Trace.Assert(
-                payloadLength == mask,
-                $"The length of data is {payloadLength}, but should be power of 2!"
-            );
-
-            var frame = new byte[payloadLength + 1];
+                payloadLength < 1 << 16,
+                $"The length of data is {payloadLength}, but should be less than {1 << 16}!");
+            
+            var frame = new byte[payloadLength + 2];
 
             byte len;
-            for (len = 0; mask != 1; mask >>= 1, len++) { }
-            Debug.WriteLine($"Len = {len}");
+            // for (len = 0; mask != 1; mask >>= 1, len++) { }
+            // Debug.WriteLine($"Len = {len}");
 
-            frame[0] = len;
-            Buffer.BlockCopy(arg, 0, frame, 1, arg.Length);
-            Crc32Algorithm.ComputeAndWriteToEnd(frame, 1, arg.Length);
+            frame[0] = (byte) (payloadLength >> 8);
+            frame[1] = (byte) (payloadLength & 0xFF);
+            Buffer.BlockCopy(arg, 0, frame, 2, arg.Length);
+            
+            Crc32Algorithm.ComputeAndWriteToEnd(frame, 2, arg.Length);
             Debug.WriteLine($"Crc is {BitConverter.ToString(frame[^4..])}");
             return frame;
         }
@@ -160,7 +165,7 @@ namespace Athernet.PhysicalLayer.Transmit
         {
             Trace.WriteLine($"P3. Playing samples {samples.Length}.");
 
-            Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
+            // Athernet.Utils.Debug.WriteTempWav(samples, "real_body.wav");
             var byteFrame = new byte[(_preamble.Length + samples.Length) * 4];
 
             Buffer.BlockCopy(_preamble, 0, byteFrame, 0, _preamble.Length * 4);
