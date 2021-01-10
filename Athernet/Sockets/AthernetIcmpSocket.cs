@@ -18,7 +18,7 @@ namespace Athernet.Sockets
         public delegate void NewDatagramEventHandler(object sender, NewDatagramEventArgs e);
 
         public event NewDatagramEventHandler NewDatagram;
-        
+
         private readonly Random _random = new Random();
 
         private IpV4Address _localAddress;
@@ -30,12 +30,12 @@ namespace Athernet.Sockets
         private TcpState _tcpState = TcpState.Closed;
 
         private Mac _athernetMac;
-        
+
         public AthernetIcmpSocket(Mac mac)
         {
             _athernetMac = mac;
         }
-        
+
         public void Listen()
         {
             _athernetMac.DataAvailable += OnAthernetMacOnDataAvailable;
@@ -46,12 +46,15 @@ namespace Athernet.Sockets
         {
             var ipv4 = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4;
             var icmp = ipv4.Icmp;
+            
             Console.WriteLine($"<- [ICMP] Source={ipv4.Source} Dest={ipv4.Destination}");
 
             if (icmp.MessageType == IcmpMessageType.Echo)
             {
-                SendIcmpPacket(ipv4.Source, icmp.Payload, true);
+                var echo = (IcmpEchoDatagram) icmp;
+                SendIcmpPacket(ipv4.Source, echo.SequenceNumber, echo.Payload, true);
             }
+
             OnNewDatagramReceived(icmp);
         }
 
@@ -62,14 +65,12 @@ namespace Athernet.Sockets
 
         private void OnNewDatagramReceived(IcmpDatagram icmpDatagram)
         {
-            NewDatagram?.Invoke(this, new NewDatagramEventArgs{Datagram = icmpDatagram});
+            NewDatagram?.Invoke(this, new NewDatagramEventArgs {Datagram = icmpDatagram});
         }
-        
-        public void SendIcmpPacket(IpV4Address destination, byte[] payload) =>
-            SendIcmpPacket(destination, new Datagram(payload));
-        
-        
-        public void SendIcmpPacket(IpV4Address destination, Datagram datagram = null, bool reply = false)
+
+
+        public void SendIcmpPacket(IpV4Address destination, ushort sequenceNumber, Datagram datagram = null,
+            bool reply = false)
         {
             var ipV4Layer = new IpV4Layer()
             {
@@ -89,7 +90,7 @@ namespace Athernet.Sockets
                 {
                     Checksum = null,
                     Identifier = IcmpIdentifier,
-                    SequenceNumber = _sequenceNumber
+                    SequenceNumber = sequenceNumber
                 };
             }
             else
@@ -101,7 +102,7 @@ namespace Athernet.Sockets
                     SequenceNumber = _sequenceNumber
                 };
             }
-            
+
             PacketBuilder builder;
             if (datagram != null)
             {
@@ -109,16 +110,17 @@ namespace Athernet.Sockets
                 {
                     Data = datagram
                 };
-                builder = new PacketBuilder( ipV4Layer, icmpLayer, payloadLayer);
+                builder = new PacketBuilder(ipV4Layer, icmpLayer, payloadLayer);
             }
             else
             {
-                builder = new PacketBuilder( ipV4Layer, icmpLayer);
+                builder = new PacketBuilder(ipV4Layer, icmpLayer);
             }
+
             var packet = builder.Build(DateTime.Now);
-            
+
             _athernetMac.AddPayload(Arp(_remoteAddress.ToString()), packet.Buffer);
-            
+
             Console.WriteLine(
                 $"-> [ICMP] PayloadLen={datagram?.Length}");
         }
@@ -134,6 +136,5 @@ namespace Athernet.Sockets
             const string client = "192.168.1.2";
             return address == client ? (byte) 1 : (byte) 0;
         };
-
     }
 }

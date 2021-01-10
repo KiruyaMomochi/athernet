@@ -102,7 +102,7 @@ namespace Athernet.Nat
                 _natTable.TryGetValue(athernetEntry, out var ethernetEntry);
                 if (ethernetEntry == null)
                 {
-                    ethernetEntry = new NatEntry(ProtocolType.Icmp, _localAddress.ToString(), 0);
+                    ethernetEntry = new NatEntry(ProtocolType.Icmp, ipV4Layer.Destination.ToString(), 0);
                     _natTable.Add(athernetEntry, ethernetEntry);
                     _natTable.Add(ethernetEntry, athernetEntry);
                 }
@@ -180,7 +180,7 @@ namespace Athernet.Nat
 
                 if (athernetEntry == null)
                 {
-                    throw new KeyNotFoundException("athernet entry not exist");
+                    Console.WriteLine("athernet entry not exist");
                 }
 
                 Console.WriteLine(
