@@ -40,9 +40,9 @@ namespace Athernet.AppLayer.FTPClient
         }
         public byte[] ToBytes()
         {
-            Encoding ASCII = Encoding.ASCII;
+            Encoding utf8 = Encoding.UTF8;
             //Debug.WriteLine("Encoding set to ASCII.");
-            return ASCII.GetBytes(this.ToString());
+            return utf8.GetBytes(this.ToString());
         }
         public bool Parse(System.String UserInput)
         {

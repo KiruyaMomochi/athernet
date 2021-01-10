@@ -61,7 +61,7 @@ namespace Athernet.AppLayer.FTPClient
             while (KeepShell)
             {
                 Message ReceivedMessage = UserPI.ReceiveMessage();
-                Console.WriteLine(ReceivedMessage.FullMessage);
+                Console.Write(ReceivedMessage.FullMessage);
                 StatusCodeClass CurrentStateCodeClass = UserPI.TakeAction(ReceivedMessage, CurrentCommand); // When CurrentCommand.Empty == true, is building connection.
                 Debug.WriteLine($"CurrentStateCodeClass = {CurrentStateCodeClass}");
                 // TODO: Need to update last **VALID** command!!!!!!!!!!!

@@ -257,7 +257,7 @@ namespace Athernet.AppLayer.FTPClient
             {
                 int BytesRecv = Connection.Receive(RecvBuffer);
 
-                string ReceivedMessage = Encoding.ASCII.GetString(RecvBuffer.Take(BytesRecv).ToArray());
+                string ReceivedMessage = Encoding.UTF8.GetString(RecvBuffer.Take(BytesRecv).ToArray());
                 string CodeText = new string(ReceivedMessage.Take(StatusCode.LengthNumber).ToArray());
                 RecvMsg = new Message(CodeText, ReceivedMessage);
                 Debug.WriteLine($"Received: \"{RecvMsg.FullMessage}\" Code: {RecvMsg.StatusCode}");

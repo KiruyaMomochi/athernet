@@ -83,7 +83,7 @@ namespace Athernet.AppLayer.FTPClient
                 {
 
                     int BytesRecv = Connection.Receive(RecvBuffer);
-                    RecvMsg += Encoding.ASCII.GetString(RecvBuffer.Take(BytesRecv).ToArray());
+                    RecvMsg += Encoding.UTF8.GetString(RecvBuffer.Take(BytesRecv).ToArray());
                     Debug.WriteLine($"Received: \"{RecvMsg}\"");
                 }
                 else
