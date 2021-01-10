@@ -47,12 +47,12 @@ namespace Athernet.Sockets
             var ipv4 = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4;
             var icmp = ipv4.Icmp;
             
-            Console.WriteLine($"<- [ICMP] Source={ipv4.Source} Dest={ipv4.Destination}");
+            Console.WriteLine($"<- [ICMP] {ipv4.Source} -> {ipv4.Destination}");
 
             if (icmp.MessageType == IcmpMessageType.Echo)
             {
                 var echo = (IcmpEchoDatagram) icmp;
-                SendIcmpPacket(ipv4.Source, echo.SequenceNumber, echo.Payload, true);
+                SendIcmpPacket(ipv4.Source, echo.SequenceNumber, echo.Identifier, echo.Payload, true);
             }
 
             OnNewDatagramReceived(icmp);
@@ -69,7 +69,7 @@ namespace Athernet.Sockets
         }
 
 
-        public void SendIcmpPacket(IpV4Address destination, ushort sequenceNumber, Datagram datagram = null,
+        public void SendIcmpPacket(IpV4Address destination, ushort icmpIdentifier, ushort sequenceNumber, Datagram datagram = null,
             bool reply = false)
         {
             var ipV4Layer = new IpV4Layer()
@@ -89,7 +89,7 @@ namespace Athernet.Sockets
                 icmpLayer = new IcmpEchoReplyLayer()
                 {
                     Checksum = null,
-                    Identifier = IcmpIdentifier,
+                    Identifier = icmpIdentifier,
                     SequenceNumber = sequenceNumber
                 };
             }
@@ -122,7 +122,7 @@ namespace Athernet.Sockets
             _athernetMac.AddPayload(Arp(_remoteAddress.ToString()), packet.Buffer);
 
             Console.WriteLine(
-                $"-> [ICMP] PayloadLen={datagram?.Length}");
+                $"-> [ICMP] {ipV4Layer.Source} -> {ipV4Layer.Destination} PayloadLen={datagram?.Length}");
         }
 
         public ushort IcmpIdentifier { get; set; }

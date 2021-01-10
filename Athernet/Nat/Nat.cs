@@ -111,7 +111,7 @@ namespace Athernet.Nat
                 ipV4Layer.HeaderChecksum = null;
                 
                 Console.WriteLine(
-                    $"-> [NAT] ICMP");
+                    $"-> [NAT] ICMP {ipV4Layer.Source} -> {ipV4Layer.Destination}");
                 
                 var modifiedPacket =
                     PacketBuilder.Build(DateTime.Now, ipV4Layer, ipV4Datagram.Payload.ExtractLayer());
@@ -184,7 +184,7 @@ namespace Athernet.Nat
                 }
 
                 Console.WriteLine(
-                    $"<- [NAT] ICMP");
+                    $"<- [NAT] ICMP {ipV4Layer.Source} -> {ipV4Layer.Destination}");
 
                 ipV4Layer.CurrentDestination = new IpV4Address(athernetEntry.Ip);
                 ipV4Layer.HeaderChecksum = null;
