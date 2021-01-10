@@ -109,6 +109,10 @@ namespace Athernet.Nat
 
                 ipV4Layer.Source = new IpV4Address(ethernetEntry.Ip);
                 ipV4Layer.HeaderChecksum = null;
+                
+                Console.WriteLine(
+                    $"-> [NAT] ICMP");
+                
                 var modifiedPacket =
                     PacketBuilder.Build(DateTime.Now, ipV4Layer, ipV4Datagram.Payload.ExtractLayer());
                 SendEthernetPacket(modifiedPacket);
@@ -178,6 +182,9 @@ namespace Athernet.Nat
                 {
                     throw new KeyNotFoundException("athernet entry not exist");
                 }
+
+                Console.WriteLine(
+                    $"<- [NAT] ICMP");
 
                 ipV4Layer.Source = new IpV4Address(ethernetEntry.Ip);
                 ipV4Layer.HeaderChecksum = null;
