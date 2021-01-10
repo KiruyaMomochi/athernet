@@ -170,7 +170,7 @@ namespace Athernet.Nat
         {
             var ipV4Datagram = packet.Ethernet.IpV4;
             var ipV4Layer = (IpV4Layer) ipV4Datagram.ExtractLayer();
-
+            
             if (ipV4Layer.Protocol == IpV4Protocol.InternetControlMessageProtocol)
             {
                 var ethernetEntry =
@@ -186,11 +186,11 @@ namespace Athernet.Nat
                 Console.WriteLine(
                     $"<- [NAT] ICMP");
 
-                ipV4Layer.Source = new IpV4Address(ethernetEntry.Ip);
+                ipV4Layer.CurrentDestination = new IpV4Address(athernetEntry.Ip);
                 ipV4Layer.HeaderChecksum = null;
                 var modifiedPacket =
                     PacketBuilder.Build(DateTime.Now, ipV4Layer, ipV4Datagram.Payload.ExtractLayer());
-                SendEthernetPacket(modifiedPacket);
+                SendAthernetPacket(modifiedPacket);
             }
             else
             {
