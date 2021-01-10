@@ -95,7 +95,7 @@ namespace Athernet.AppLayer.FTPClient
         }
         public Message ReceiveMessage()
         {
-            Encoding ASCII = Encoding.ASCII;
+            Encoding utf8 = Encoding.UTF8;
             StateObject State = new StateObject();
             //int BytesRecv = Connection.Receive(RecvBuffer);
             State.WorkSocket = Connection;
@@ -124,8 +124,8 @@ namespace Athernet.AppLayer.FTPClient
                 StateObject State = (StateObject)AsyncResult.AsyncState;
                 Socket WorkSocket = State.WorkSocket;
                 int ReadBytes = WorkSocket.EndReceive(AsyncResult);
-                Debug.WriteLine($"Received {ReadBytes} Bytes... Payload = \"{Encoding.ASCII.GetString(State.Buffer, 0, ReadBytes)}\"");
-
+                Debug.WriteLine($"Received {ReadBytes} Bytes... Payload = \"{Encoding.UTF8.GetString(State.Buffer, 0, ReadBytes)}\"");
+                Console.Write(Encoding.UTF8.GetString(State.Buffer, 0, ReadBytes));
                 
                 if (ReadBytes > 0)
                 {
@@ -137,7 +137,7 @@ namespace Athernet.AppLayer.FTPClient
                         socketFlags: SocketFlags.None,
                         callback: new AsyncCallback(ReadCallback),
                         state: State);
-                    State.StringBuffer.Append(Encoding.ASCII.GetString(State.Buffer, 0, ReadBytes));
+                    State.StringBuffer.Append(Encoding.UTF8.GetString(State.Buffer, 0, ReadBytes));
                     Debug.WriteLine($"One Callback done.");
                 }
                 //else
