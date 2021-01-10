@@ -49,39 +49,39 @@ namespace AthernetCLI
 
             // TestMac();
 
-            var node1 = new Mac(1, 2, 0, 2048);
+            // var node1 = new Mac(1, 2, 0, 2048);
             var node2 = new Mac(0, 4, 2, 2048);
 
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
 
-            var athernetTcpSocket = new AthernetTcpSocket(node1);
-            var athernetTcpSocket2 = new AthernetTcpSocket(node1);
+            // var athernetTcpSocket = new AthernetTcpSocket(node1);
+            // var athernetTcpSocket2 = new AthernetTcpSocket(node1);
             
             var nat = new Nat(1, node2);
             nat.Listen();
 
-            try
-            {
-                athernetTcpSocket.Bind(2333, new IpV4Address("10.20.212.86"), 21);
-                athernetTcpSocket.Listen();
-                athernetTcpSocket.Open();
+            // try
+            // {
+                // athernetTcpSocket.Bind(2333, new IpV4Address("10.20.212.86"), 21);
+                // athernetTcpSocket.Listen();
+                // athernetTcpSocket.Open();
                 
                 // athernetTcpSocket2.Bind(2334, new IpV4Address("10.20.212.86"), 21);
                 // athernetTcpSocket2.Listen();
                 // athernetTcpSocket2.Open();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            // }
+            // catch (Exception e)
+            // {
+            //     Console.WriteLine(e);
+            //     throw;
+            // }
 
-            athernetTcpSocket.NewDatagram += (sender, eventArgs) =>
-            {
-                Console.WriteLine(eventArgs.Datagram.Decode(Encoding.UTF8));
-            };
-
-            athernetTcpSocket.SendPayload(new UTF8Encoding().GetBytes("QUIT\n\r"));
+            // athernetTcpSocket.NewDatagram += (sender, eventArgs) =>
+            // {
+            //     Console.WriteLine(eventArgs.Datagram.Decode(Encoding.UTF8));
+            // };
+            //
+            // athernetTcpSocket.SendPayload(new UTF8Encoding().GetBytes("QUIT\n\r"));
             // athernetTcpSocket2.SendPayload(new UTF8Encoding().GetBytes("QUIT\n\r"));
 
             Task.Delay(100000).Wait();

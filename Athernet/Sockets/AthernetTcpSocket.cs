@@ -55,7 +55,7 @@ namespace Athernet.Sockets
             _remotePort = remotePort;
             _localPort = localPort;
         }
-        
+
         public void Open()
         {
             if (TcpState != TcpState.Closed)
