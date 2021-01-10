@@ -18,9 +18,9 @@ namespace MacPerf
             // var node1 = new Mac(1, payloadBytes, 1, 1);
             var node2 = new Mac(2, payloadBytes, 0, 0);
 
-            // node1.StartReceive();
+            //node1.StartReceive();
             node2.StartReceive();
-            // var ping = Task.Run(() => MacPing(node1, 2));
+            //var ping = Task.Run(() => MacPing(node1, 2));
             // var perf1 = Task.Run(() => MacPerf(node1, 2, payloadBytes));
             // var perf2 = Task.Run(() => MacPerf(node2, 1, payloadBytes));
             // Task.WaitAll(perf1, perf2);
