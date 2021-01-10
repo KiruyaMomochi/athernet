@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Athernet.AppLayer.FTPClient;
@@ -30,6 +31,7 @@ namespace Athernet.AppLayer.AthernetFTPClient
             NetworkEnvironment = UserPI.UnderAthernet ? "ATHERNET" : "INTERNET";
             CurrentCommand = new Command();
         }
+        
         /// <summary>
         /// Interactive Shell.
         /// </summary>
@@ -96,9 +98,9 @@ namespace Athernet.AppLayer.AthernetFTPClient
 
         public void TailTask()
         {
-            if (UserPI.Connection.Connected)
+            if (UserPI.AudioConnection.Connected)
             {
-                UserPI.Connection.Close();
+                UserPI.AudioConnection.Break();
             }
         }
 
