@@ -78,7 +78,10 @@ namespace Athernet.Sockets
                 
                 Console.WriteLine(
                     $"<- [{TcpState}] {tcp.ControlBits} Seq={tcp.SequenceNumber} Win={tcp.Window} Ack={tcp.AcknowledgmentNumber} PayloadLen={tcp.PayloadLength}");
-                OnNewDatagramReceived(tcp);
+                if (tcp.DestinationPort == _localPort)
+                {
+                    OnNewDatagramReceived(tcp);
+                }
             };
             _athernetMac.StartReceive();
         }

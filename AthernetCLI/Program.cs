@@ -46,15 +46,17 @@ namespace AthernetCLI
             //     new UTF8Encoding().GetBytes("QUIT\r\n"));
             // t.Wait();
             // socket.Break();
-            
+
             // TestMac();
 
             var node1 = new Mac(1, 2, 0, 2048);
             var node2 = new Mac(0, 4, 2, 2048);
 
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            
+
             var athernetTcpSocket = new AthernetTcpSocket(node1);
+            var athernetTcpSocket2 = new AthernetTcpSocket(node1);
+            
             var nat = new Nat(1, node2);
             nat.Listen();
 
@@ -63,6 +65,10 @@ namespace AthernetCLI
                 athernetTcpSocket.Bind(2333, new IpV4Address("10.20.212.86"), 21);
                 athernetTcpSocket.Listen();
                 athernetTcpSocket.Open();
+                
+                // athernetTcpSocket2.Bind(2334, new IpV4Address("10.20.212.86"), 21);
+                // athernetTcpSocket2.Listen();
+                // athernetTcpSocket2.Open();
             }
             catch (Exception e)
             {
@@ -76,9 +82,9 @@ namespace AthernetCLI
             };
 
             athernetTcpSocket.SendPayload(new UTF8Encoding().GetBytes("QUIT\n\r"));
-            
+            // athernetTcpSocket2.SendPayload(new UTF8Encoding().GetBytes("QUIT\n\r"));
+
             Task.Delay(100000).Wait();
-            
         }
 
         //     public static byte[] Compress(byte[] data)
@@ -333,7 +339,7 @@ namespace AthernetCLI
             // var node2 = new IP(IPAddress.Parse("192.168.1.1"), 2, 0, 2048);
             //
             var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            
+
             node1.StartReceive();
             node2.StartReceive();
             node2.DataAvailable += (sender, eventArgs) =>
