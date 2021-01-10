@@ -44,8 +44,14 @@ namespace Athernet.Sockets
 
         private void OnAthernetMacOnDataAvailable(object? sender, DataAvailableEventArgs args)
         {
-            Console.WriteLine("-> [ICMP]");
-            var icmp = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4.Icmp;
+            var ipv4 = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4;
+            var icmp = ipv4.Icmp;
+            Console.WriteLine($"<- [ICMP] Source={ipv4.Source} Dest={ipv4.Destination}");
+
+            if (icmp.MessageType == IcmpMessageType.Echo)
+            {
+                SendIcmpPacket(ipv4.Source, icmp.Payload, true);
+            }
             OnNewDatagramReceived(icmp);
         }
 
@@ -63,7 +69,7 @@ namespace Athernet.Sockets
             SendIcmpPacket(destination, new Datagram(payload));
         
         
-        public void SendIcmpPacket(IpV4Address destination, Datagram datagram = null)
+        public void SendIcmpPacket(IpV4Address destination, Datagram datagram = null, bool reply = false)
         {
             var ipV4Layer = new IpV4Layer()
             {
@@ -76,12 +82,26 @@ namespace Athernet.Sockets
                 Ttl = 100,
                 TypeOfService = 0
             };
-            var icmpLayer = new IcmpEchoLayer()
+            ILayer icmpLayer;
+            if (reply)
             {
-                Checksum = null,
-                Identifier = IcmpIdentifier,
-                SequenceNumber = _sequenceNumber
-            };
+                icmpLayer = new IcmpEchoReplyLayer()
+                {
+                    Checksum = null,
+                    Identifier = IcmpIdentifier,
+                    SequenceNumber = _sequenceNumber
+                };
+            }
+            else
+            {
+                icmpLayer = new IcmpEchoLayer()
+                {
+                    Checksum = null,
+                    Identifier = IcmpIdentifier,
+                    SequenceNumber = _sequenceNumber
+                };
+            }
+            
             PacketBuilder builder;
             if (datagram != null)
             {
