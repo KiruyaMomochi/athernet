@@ -97,12 +97,12 @@ namespace Athernet.Nat
 
             if (ipV4Layer.Protocol == IpV4Protocol.InternetControlMessageProtocol)
             {
-                var athernetEntry = new NatEntry(ProtocolType.Icmp, ipV4Layer.Source.ToString(), 0);
+                var athernetEntry = new NatEntry(ProtocolType.Icmp, ipV4Layer.Source.ToString(), 1234);
 
                 _natTable.TryGetValue(athernetEntry, out var ethernetEntry);
                 if (ethernetEntry == null)
                 {
-                    ethernetEntry = new NatEntry(ProtocolType.Icmp, _localAddress.ToString(), 0);
+                    ethernetEntry = new NatEntry(ProtocolType.Icmp, _localAddress.ToString(), 1234);
                     _natTable.Add(athernetEntry, ethernetEntry);
                     _natTable.Add(ethernetEntry, athernetEntry);
                 }
@@ -174,13 +174,14 @@ namespace Athernet.Nat
             if (ipV4Layer.Protocol == IpV4Protocol.InternetControlMessageProtocol)
             {
                 var ethernetEntry =
-                    new NatEntry(ProtocolType.Icmp, ipV4Layer.Destination.ToString(), 0);
+                    new NatEntry(ProtocolType.Icmp, ipV4Layer.Destination.ToString(), 1234);
 
                 _natTable.TryGetValue(ethernetEntry, out var athernetEntry);
 
                 if (athernetEntry == null)
                 {
                     Console.WriteLine("athernet entry not exist");
+                    return;
                 }
 
                 Console.WriteLine(
