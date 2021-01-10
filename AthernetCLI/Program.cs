@@ -47,18 +47,18 @@ namespace AthernetCLI
             // t.Wait();
             // socket.Break();
 
-            // TestMac();
+            TestMac();
 
             // var node1 = new Mac(1, 2, 0, 2048);
-            var node2 = new Mac(0, 4, 2, 2048);
-
-            var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            // var node2 = new Mac(0, 4, 2, 2048);
+            //
+            // var ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
 
             // var athernetTcpSocket = new AthernetTcpSocket(node1);
             // var athernetTcpSocket2 = new AthernetTcpSocket(node1);
             
-            var nat = new Nat(1, node2);
-            nat.Listen();
+            // var nat = new Nat(1, node2);
+            // nat.Listen();
 
             // try
             // {
@@ -333,8 +333,8 @@ namespace AthernetCLI
         //     }
         private static void TestMac()
         {
-            var node1 = new Mac(0, 4, 2, 2048);
-            var node2 = new Mac(1, 2, 0, 2048);
+            var node1 = new Mac(0, 2, 0, 10240);
+            var node2 = new Mac(1, 4, 2, 10240);
             // var node1 = new IP(IPAddress.Parse("192.168.1.2"), 4, 2, 2048);
             // var node2 = new IP(IPAddress.Parse("192.168.1.1"), 2, 0, 2048);
             //
@@ -347,7 +347,7 @@ namespace AthernetCLI
                 ewh.Set();
                 Console.WriteLine(BitConverter.ToString(eventArgs.Data));
             };
-            node1.AddPayload(1, new byte[15]);
+            node1.AddPayload(1, new byte[8192]);
         }
     }
 }

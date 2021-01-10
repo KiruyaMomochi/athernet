@@ -24,6 +24,8 @@ namespace Athernet.Sockets
             public Datagram Datagram;
         }
 
+        public bool Connected => TcpState == TcpState.Established;
+
         public delegate void NewDatagramEventHandler(object sender, NewDatagramEventArgs e);
 
         public event NewDatagramEventHandler NewDatagram;
@@ -72,21 +74,25 @@ namespace Athernet.Sockets
         
         public void Listen()
         {
-            _athernetMac.DataAvailable += (sender, args) =>
-            {
-                var tcp = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4.Tcp;
-                
-                Console.WriteLine(
-                    $"<- [{TcpState}] {tcp.ControlBits} Seq={tcp.SequenceNumber} Win={tcp.Window} Ack={tcp.AcknowledgmentNumber} PayloadLen={tcp.PayloadLength}");
-                if (tcp.DestinationPort == _localPort)
-                {
-                    OnNewDatagramReceived(tcp);
-                }
-            };
+            _athernetMac.DataAvailable += OnAthernetMacOnDataAvailable;
             _athernetMac.StartReceive();
         }
 
-        public void Break() => _athernetMac.StopReceive();
+        private void OnAthernetMacOnDataAvailable(object? sender, DataAvailableEventArgs args)
+        {
+            var tcp = new Packet(args.Data, DateTime.Now, DataLinkKind.IpV4).IpV4.Tcp;
+
+            if (tcp.DestinationPort == _localPort)
+            {
+                Console.WriteLine($"<- {_localPort} [{TcpState}] {tcp.ControlBits} Seq={tcp.SequenceNumber} Win={tcp.Window} Ack={tcp.AcknowledgmentNumber} PayloadLen={tcp.PayloadLength}");
+                OnNewDatagramReceived(tcp);
+            }
+        }
+
+        public void Break()
+        {
+            _athernetMac.DataAvailable -= OnAthernetMacOnDataAvailable;
+        }
 
         private void OnNewDatagramReceived(TcpDatagram tcpDatagram)
         {
@@ -104,6 +110,7 @@ namespace Athernet.Sockets
             }
 
             // Stop and wait
+            var oldAck = _acknowledgmentNumber;
             _acknowledgmentNumber = (uint) (tcpDatagram.SequenceNumber + tcpDatagram.PayloadLength);
             
             switch (TcpState)
@@ -112,6 +119,15 @@ namespace Athernet.Sockets
                     _acknowledgmentNumber += 1;
                     SendTcpPacket(TcpControlBits.Acknowledgment);
                     TcpState = TcpState.Established;
+                    break;
+                case TcpState.Established when (tcpDatagram.IsFin && tcpDatagram.IsPush && tcpDatagram.IsAcknowledgment):
+                    if (oldAck >= _acknowledgmentNumber)
+                        break;
+                    OnNewPayloadReceived(tcpDatagram.Payload);
+                    TcpState = TcpState.CloseWait;
+                    _acknowledgmentNumber += 1;
+                    SendTcpPacket(TcpControlBits.Acknowledgment | TcpControlBits.Fin);
+                    TcpState = TcpState.LastAck;
                     break;
                 case TcpState.Established when (tcpDatagram.IsFin && tcpDatagram.IsAcknowledgment):
                     _acknowledgmentNumber += 1;
@@ -128,7 +144,19 @@ namespace Athernet.Sockets
                     break;
                 case TcpState.Established when tcpDatagram.IsPush:
                     SendTcpPacket(TcpControlBits.Acknowledgment);
+                    if (oldAck >= _acknowledgmentNumber)
+                    {
+                        Console.WriteLine("Break");
+                        break;
+                    }
                     OnNewPayloadReceived(tcpDatagram.Payload);
+                    break;
+                case TcpState.Established when tcpDatagram.IsAcknowledgment:
+                    if (tcpDatagram.PayloadLength != 0)
+                    {
+                        OnNewPayloadReceived(tcpDatagram.Payload);
+                        SendTcpPacket(TcpControlBits.Acknowledgment);
+                    }
                     break;
                 case TcpState.Established:
                     SendTcpPacket(TcpControlBits.Acknowledgment);
@@ -200,7 +228,7 @@ namespace Athernet.Sockets
             _athernetMac.AddPayload(Arp(_remoteAddress.ToString()), packet.Buffer);
             
             Console.WriteLine(
-                $"-> [{TcpState}] {tcpLayer.ControlBits} Seq={tcpLayer.SequenceNumber} Win={tcpLayer.Window} Ack={tcpLayer.AcknowledgmentNumber} PayloadLen={datagram?.Length}");
+                $"-> {_localPort} [{TcpState}] {tcpLayer.ControlBits} Seq={tcpLayer.SequenceNumber} Win={tcpLayer.Window} Ack={tcpLayer.AcknowledgmentNumber} PayloadLen={datagram?.Length}");
 
             if ((tcpControlBits & (TcpControlBits.Synchronize | TcpControlBits.Fin)) != 0)
             {
@@ -215,7 +243,7 @@ namespace Athernet.Sockets
         public void SendPayload(byte[] payload) =>
             SendTcpPacket(TcpControlBits.Push | TcpControlBits.Acknowledgment, payload);
         
-        private const int TcpWindowSize = 1024;
+        private const int TcpWindowSize = 8192;
         
         public delegate byte ArpDelegate(string address);
 

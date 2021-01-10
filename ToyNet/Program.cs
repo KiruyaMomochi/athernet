@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net;
-using Athernet.AppLayer.FTPClient;
+using Athernet.AppLayer.AthernetFTPClient;
 using Athernet.MacLayer;
 using Athernet.Nat;
 
@@ -10,7 +10,9 @@ namespace ToyNet
     {
         private static void Main(string[] args)
         {
-            var node2 = new Mac(0, 4, 2, 2048);
+            Athernet.Utils.Audio.ListDevices();
+            
+            var node2 = new Mac(0, 4, 3, 10240);
             var nat = new Nat(1, node2);
             nat.Listen();
             

@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Athernet.AppLayer.FTPClient;
 using Athernet.MacLayer;
 using Athernet.Sockets;
+using PcapDotNet.Packets;
 using PcapDotNet.Packets.IpV4;
+using AddressFamily = System.Net.Sockets.AddressFamily;
 
 namespace Athernet.AppLayer.AthernetFTPClient
 {
@@ -17,7 +21,6 @@ namespace Athernet.AppLayer.AthernetFTPClient
     {
         public bool UnderAthernet { get; set; } = true;
         public bool PassiveConnected { get; private set; } = false;
-        public AthernetTcpSocket Connection { get; set; }
         public AthernetTcpSocket AudioConnection { get; set; }
         public Command CurrentCommand { get; private set; }
         public DataTransferProcess UserDTP { get; private set; }
@@ -45,9 +48,9 @@ namespace Athernet.AppLayer.AthernetFTPClient
         public void SendCommand(Command cmd)
         {
             Debug.WriteLine($"Command about to send: {cmd}");
-            if (Connection.Connected)
+            if (AudioConnection.Connected)
             {
-                Connection.Send(cmd.ToBytes());
+                AudioConnection.SendPayload(cmd.ToBytes());
                 CurrentCommand = cmd.DeepClone();
                 Debug.WriteLine($"CurrentCommand = {CurrentCommand}");
             }
@@ -115,8 +118,8 @@ namespace Athernet.AppLayer.AthernetFTPClient
                     PassiveConnected = true;
                     if (UserDTP != null)
                     {
-                        if (UserDTP.Connection.Connected)
-                            UserDTP.Connection.Close();
+                        if (UserDTP.AudioConnection.Connected)
+                            UserDTP.AudioConnection.Break();
                         UserDTP = null; // Release previously-allocated unwanted resources/connections
                     }
 
@@ -135,7 +138,7 @@ namespace Athernet.AppLayer.AthernetFTPClient
                     IPAddress Address = IPAddress.Parse(AddressString);
                     int Port = int.Parse(ParsedResult[4]) * 256 + int.Parse(ParsedResult[5]);
                     Debug.WriteLine(Port);
-                    UserDTP = new DataTransferProcess(Address, Port);
+                    UserDTP = new DataTransferProcess(Address, Port, _macNode);
                     return ActionMessage.GetCodeClass();
                 // TODO: Build Connection here!
                 // Reminder: If previously built. then TERMINATE IT and build another one!
@@ -165,17 +168,18 @@ namespace Athernet.AppLayer.AthernetFTPClient
                 case FtpStatusCode.RestartMarker:
                     //PassiveConnected = false;
                     Debug.WriteLine("receiving data...");
-                    if (UserDTP.TransmissionTask == null)
-                    {
-                        UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
-                    }
+                    // if (UserDTP.TransmissionTask == null)
+                    // {
+                    //     UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
+                    // }
 
                     return ActionMessage.GetCodeClass();
                 // 2XX
                 case FtpStatusCode.ClosingData:
                 case FtpStatusCode.FileActionOK:
-                    UserDTP.Connection.Disconnect(false);
-                    UserDTP.TransmissionTask.Wait();
+                    SpinWait.SpinUntil(() => UserDTP.AudioConnection.TcpState == TcpState.Closed);
+                    // UserDTP.AudioConnection.Break(); 
+                    // UserDTP.TransmissionTask.Wait();
                     //Debug.WriteLine($"Task.Run(UserDTP.ReceiveData) is completed? {task.IsCompleted}")
                     Console.WriteLine(
                         $"{UserDTP.RecvMsg.Length * 8} bytes ({UserDTP.RecvMsg.Length * 8 / 1024.0} KiB) received.");
@@ -226,18 +230,18 @@ namespace Athernet.AppLayer.AthernetFTPClient
                 case FtpStatusCode.OpeningData:
                     // TODO here!
                     Debug.WriteLine("receiving data...");
-                    if (UserDTP.TransmissionTask == null)
-                    {
-                        UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
-                    }
+                    // if (UserDTP.TransmissionTask == null)
+                    // {
+                    //     UserDTP.TransmissionTask = Task.Run(UserDTP.ReceiveData);
+                    // }
 
                     return ActionMessage.GetCodeClass();
                     break;
                 // 2XX
                 case FtpStatusCode.ClosingData:
                 case FtpStatusCode.FileActionOK:
-                    UserDTP.Connection.Disconnect(false);
-                    UserDTP.TransmissionTask.Wait();
+                    SpinWait.SpinUntil(() => UserDTP.AudioConnection.TcpState == TcpState.Closed);
+                    // UserDTP.TransmissionTask.Wait();
                     //Debug.WriteLine($"Task.Run(UserDTP.ReceiveData) is completed? {task.IsCompleted}")
                     Console.WriteLine($"{UserDTP.RecvMsg}");
                     Debug.WriteLine("data received...");
@@ -267,28 +271,31 @@ namespace Athernet.AppLayer.AthernetFTPClient
             return (Message.GetCodeClass() == StatusCodeClass.TransientNegativeCompletionReply);
         }
 
+        private BlockingCollection<string> _messageQueue = new();
+
         public Message ReceiveMessage()
         {
             Message RecvMsg;
+            
             //for (var i = 0; i < 2; i++)
             {
-                int BytesRecv = Connection.Receive(RecvBuffer);
-
-                string ReceivedMessage = Encoding.UTF8.GetString(RecvBuffer.Take(BytesRecv).ToArray());
+                string ReceivedMessage = _messageQueue.Take();
                 string CodeText = new string(ReceivedMessage.Take(StatusCode.LengthNumber).ToArray());
                 RecvMsg = new Message(CodeText, ReceivedMessage);
                 Debug.WriteLine($"Received: \"{RecvMsg.FullMessage}\" Code: {RecvMsg.StatusCode}");
             }
             return RecvMsg;
         }
+        
+        private Mac _macNode = new Mac(1, 2, 0, 10240);
 
         public bool BuildConnection(IPAddress DestinationAddress, int DestinationPort)
         {
-            var node1 = new Mac(1, 2, 0, 2048);
-            AudioConnection = new AthernetTcpSocket(node1);
-            AudioConnection.Listen();
+            AudioConnection = new AthernetTcpSocket(_macNode);
             AudioConnection.Bind(2333, new IpV4Address(DestinationAddress.ToString()), (ushort) DestinationPort);
+            AudioConnection.Listen();
             AudioConnection.Open();
+            AudioConnection.NewDatagram += (sender, args) => _messageQueue.Add(args.Datagram.Decode(Encoding.UTF8));
             return true;
         }
     }

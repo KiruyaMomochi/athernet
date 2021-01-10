@@ -22,7 +22,7 @@ namespace Athernet.Nat
         // private NatTable _natTable;
 
         // binding: athernet mac, interface number
-        private Random _random = new Random(48);
+        private Random _random = new Random();
 
         private readonly PacketCommunicator _communicator;
         private IpV4Address _localAddress;
